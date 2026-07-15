@@ -26,6 +26,7 @@
     }
     const ui = new GR.UI(game, settings);
     GR.game = game; // handy for debugging/testing from the console
+    GR.RobotLib.load(); // warm up the robot model in the background
 
     const onResize = () => game.resize(window.innerWidth, window.innerHeight);
     window.addEventListener('resize', onResize);

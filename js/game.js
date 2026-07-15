@@ -75,17 +75,35 @@
 
     /* ---------------------------------------------------- avatar */
     setAvatar(cfg) {
+      this._wantedCfg = cfg;
+      let useCfg = cfg;
+      if (cfg.runner === 'robot' && (!GR.RobotLib || !GR.RobotLib.ready())) {
+        // model still downloading — stand in with clay, swap when it lands
+        if (GR.RobotLib) {
+          GR.RobotLib.load(() => {
+            if (this._wantedCfg && this._wantedCfg.runner === 'robot') this.setAvatar(this._wantedCfg);
+          });
+        }
+        useCfg = Object.assign({}, cfg, { runner: 'clay' });
+      }
       const rotY = this.avatar ? this.avatar.group.rotation.y : 0;
       if (this.avatar) {
         this.scene.remove(this.avatar.group);
         this.avatar.dispose();
       }
-      this.avatar = GR.buildAvatar(cfg);
+      this.avatar = useCfg.runner === 'robot' ? GR.buildRobotAvatar(useCfg) : GR.buildAvatar(useCfg);
       this.avatar.group.position.set(this.px, this.py, 0);
       this.avatar.group.rotation.y = rotY;
       this.scene.add(this.avatar.group);
-      if (this.animator) this.animator.setAvatar(this.avatar);
-      else this.animator = new GR.AvatarAnimator(this.avatar);
+
+      const kind = this.avatar.kind || 'clay';
+      if (!this.animator || this._animKind !== kind) {
+        this.animator = kind === 'robot' ? new GR.RobotAnimator(this.avatar) : new GR.AvatarAnimator(this.avatar);
+        this._animKind = kind;
+        this.animator.setState(this.state === 'running' ? 'run' : 'idle');
+      } else {
+        this.animator.setAvatar(this.avatar);
+      }
     }
 
     /* ---------------------------------------------------- effects */
@@ -583,10 +601,12 @@
 
     _updateDeath(rdt, dt) {
       this.deathT += rdt;
-      // tumble forward and settle
-      const k = Math.min(1, this.deathT / 0.6);
-      this.avatar.group.rotation.x = GR.lerp(0, -1.35, GR.smoothstep(k));
-      this.avatar.group.position.y = GR.lerp(this.py, 0.25, GR.smoothstep(k));
+      // clay tumbles forward; the robot has its own Death animation
+      if (this.avatar.kind !== 'robot') {
+        const k = Math.min(1, this.deathT / 0.6);
+        this.avatar.group.rotation.x = GR.lerp(0, -1.35, GR.smoothstep(k));
+        this.avatar.group.position.y = GR.lerp(this.py, 0.25, GR.smoothstep(k));
+      }
       this.timeScale = GR.lerp(0.35, 0.08, Math.min(1, this.deathT / 1.2));
       this.shieldMesh.visible = false;
       this.magnetRing.visible = false;

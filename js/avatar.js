@@ -702,6 +702,7 @@
 
     /* ------ public interface */
     const avatar = {
+      kind: 'clay',
       group,
       rig,
       cfg,

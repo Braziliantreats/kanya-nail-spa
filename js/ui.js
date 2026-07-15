@@ -279,7 +279,7 @@
       });
       this.$('btn-random').addEventListener('click', () => {
         GR.Audio.sfx('power');
-        this.cfg = GR.randomAvatar();
+        this.cfg = Object.assign(GR.randomAvatar(), { runner: this.cfg.runner });
         this._applyCfg();
       });
       this.$('btn-reset').addEventListener('click', () => {
@@ -301,7 +301,27 @@
     _renderTab(tab) {
       const bodyEl = this.$('custom-body');
       bodyEl.innerHTML = '';
-      for (const sec of tab.sections) {
+      const C = GR.CATALOG;
+      let sections = tab.sections;
+      if (tab.id === 'body') {
+        // runner picker lives at the top of Body; robot swaps in paint options
+        sections = [{ type: 'chips', label: 'Runner', key: 'runner', values: C.runners }];
+        if (this.cfg.runner === 'robot') {
+          sections.push(
+            { type: 'swatch', label: 'Bot Paint', key: 'robotPrimary', values: C.robotColors },
+            { type: 'swatch', label: 'Bot Trim', key: 'robotAccent', values: C.robotColors }
+          );
+        } else {
+          sections = sections.concat(tab.sections);
+        }
+      } else if (this.cfg.runner === 'robot') {
+        const hint = document.createElement('div');
+        hint.className = 'robot-hint';
+        hint.textContent = 'R0-BUD ships factory-spec 🤖 — switch the Runner to Clay Custom (Body tab) to style hair, fits & extras.';
+        bodyEl.appendChild(hint);
+        return;
+      }
+      for (const sec of sections) {
         const wrap = document.createElement('div');
         wrap.className = 'section';
         if (sec.label) {
@@ -343,6 +363,7 @@
               c.classList.add('sel');
               GR.Store.saveAvatar(this.cfg);
               this.game.setAvatar(this.cfg);
+              if (sec.key === 'runner') this._renderTab(tab); // sections change with the runner
             });
             grid.appendChild(c);
           }

@@ -65,6 +65,13 @@ fingerprint bump on every "plasticine" surface. Everything saves automatically:
 
 “🎲 Surprise Me” rolls a whole new look.
 
+### 🤖 Or run as R0-BUD the Farm-Bot
+
+In **Body → Runner**, switch to **R0-BUD** — a professionally rigged and animated
+robot (the CC0 “Robot Expressive” model by Tomás Laulhé, from the three.js
+examples) with real motion-designed Running / Jump / Death / Idle clips, an idle
+wave, and two paint slots to recolor him.
+
 ## 🌄 The world
 
 - Real-time **day/night cycle** — dawn, noon, sunset, and starry nights with fireflies;
@@ -91,6 +98,7 @@ fingerprint bump on every "plasticine" surface. Everything saves automatically:
 | | |
 |---|---|
 | Engine | [three.js r160](https://threejs.org) (vendored, converted to a classic-script global build — see `vendor/`) |
+| R0-BUD model | [“Robot Expressive”](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive) by Tomás Laulhé, CC0 (`vendor/models/robot.glb`) |
 | Code | Plain ES2020, classic `<script>` tags, shared `GR` namespace — no bundler, no dependencies |
 | Art | Every texture is painted on `<canvas>` at runtime (faces, tie-dye, road, crates, signs, the leaf itself) |
 | Characters | Procedurally assembled from primitives with a custom pose/blend animation rig |

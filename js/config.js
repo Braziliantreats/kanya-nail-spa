@@ -278,6 +278,14 @@
       { id: 'headphones', label: 'Headphones' },
       { id: 'chain', label: 'Gold Chain' },
     ],
+    runners: [
+      { id: 'clay', label: 'Clay Custom' },
+      { id: 'robot', label: 'R0-BUD the Farm-Bot' },
+    ],
+    robotColors: [
+      '#e63946', '#1b7a3d', '#f7b32b', '#2a9d8f', '#457b9d', '#5e548e',
+      '#ff7aa2', '#ff6b35', '#f4f1ea', '#1f1f23', '#8d99ae', '#7dffb5',
+    ],
     builds: [
       { id: 'slim', label: 'Slim' },
       { id: 'medium', label: 'Medium' },
@@ -291,6 +299,9 @@
   };
 
   GR.DEFAULT_AVATAR = {
+    runner: 'clay',
+    robotPrimary: '#e63946',
+    robotAccent: '#8d99ae',
     skin: '#cd8b5f',
     build: 'medium',
     height: 'medium',
@@ -319,6 +330,9 @@
     const C = GR.CATALOG;
     const id = (list) => GR.pick(list).id;
     return {
+      runner: 'clay',
+      robotPrimary: GR.pick(C.robotColors),
+      robotAccent: GR.pick(C.robotColors),
       skin: GR.pick(C.skins),
       build: id(C.builds),
       height: id(C.heights),
