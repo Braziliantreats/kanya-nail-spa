@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b140d" />
+  <title>Green Rush — a chill endless runner</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍃</text></svg>" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-screen="splash">
+  <canvas id="game-canvas"></canvas>
+
+  <div id="fatal"></div>
+
+  <!-- ======================= SPLASH ======================= -->
+  <div class="screen visible" id="screen-splash">
+    <div class="panel splash-panel">
+      <div class="leaf-logo" data-size="96"></div>
+      <h1 class="title">GREEN&nbsp;RUSH</h1>
+      <p class="tagline">the chillest endless runner in the valley</p>
+      <button class="btn big primary" id="btn-enter">LET'S GO</button>
+      <p class="fineprint">21+ vibes · enjoy responsibly · no plants were harmed</p>
+    </div>
+  </div>
+
+  <!-- ======================= MENU ======================= -->
+  <div class="screen" id="screen-menu">
+    <div class="panel menu-panel">
+      <div class="menu-head">
+        <div class="leaf-logo" data-size="46"></div>
+        <h2 class="title small">GREEN&nbsp;RUSH</h2>
+      </div>
+      <div class="stats-row">
+        <div class="stat"><span class="stat-label">BEST</span><span class="stat-value" id="menu-best">0</span></div>
+        <div class="stat"><span class="stat-label">LEAVES</span><span class="stat-value gold" id="menu-leaves">0</span></div>
+      </div>
+      <button class="btn big primary" id="btn-run">▶&nbsp;&nbsp;RUN</button>
+      <button class="btn big" id="btn-custom">✂&nbsp;&nbsp;CUSTOMIZE ME</button>
+      <div class="toggles" id="menu-toggles"></div>
+      <p class="fineprint">◀ ▶ steer · ▲ jump · ▼ slide — or swipe on mobile</p>
+    </div>
+  </div>
+
+  <!-- ======================= CUSTOMIZER ======================= -->
+  <div class="screen" id="screen-custom">
+    <div class="custom-panel">
+      <div class="custom-top">
+        <button class="btn" id="btn-custom-back">✔ Done</button>
+        <div class="custom-actions">
+          <button class="btn" id="btn-random">🎲 Surprise Me</button>
+          <button class="btn subtle" id="btn-reset">Reset</button>
+        </div>
+      </div>
+      <div class="tabs" id="custom-tabs"></div>
+      <div class="custom-body" id="custom-body"></div>
+      <p class="fineprint pad">drag the character to spin them around · saved automatically</p>
+    </div>
+  </div>
+
+  <!-- ======================= HUD ======================= -->
+  <div id="hud">
+    <div class="hud-left">
+      <div class="hud-score" id="hud-score">0</div>
+      <div class="hud-leaves"><span id="hud-leaf-slot"></span><span id="hud-leaves">0</span></div>
+      <div class="hud-mult" id="hud-mult">×2</div>
+    </div>
+    <button id="btn-pause" aria-label="Pause">❚❚</button>
+    <div class="powerbars">
+      <div class="powerbar" id="pb-magnet"><span class="pb-icon">🧲</span><div class="pb-track"><div class="pb-fill" id="bar-magnet"></div></div></div>
+      <div class="powerbar" id="pb-shield"><span class="pb-icon">🛡</span><div class="pb-track"><div class="pb-fill" id="bar-shield"></div></div></div>
+      <div class="powerbar" id="pb-boost"><span class="pb-icon">✨</span><div class="pb-track"><div class="pb-fill" id="bar-boost"></div></div></div>
+    </div>
+    <div id="toast"></div>
+    <div id="run-hint"></div>
+  </div>
+
+  <!-- ======================= PAUSE ======================= -->
+  <div class="screen" id="screen-pause">
+    <div class="panel">
+      <h2 class="title small">PAUSED</h2>
+      <button class="btn big primary" id="btn-resume">RESUME</button>
+      <div class="toggles" id="pause-toggles"></div>
+      <button class="btn" id="btn-pause-menu">EXIT TO MENU</button>
+    </div>
+  </div>
+
+  <!-- ======================= GAME OVER ======================= -->
+  <div class="screen" id="screen-over">
+    <div class="panel">
+      <div id="over-newbest">★ NEW BEST ★</div>
+      <h2 class="title small">RUN COMPLETE</h2>
+      <div class="over-score" id="over-score">0</div>
+      <div class="stats-row">
+        <div class="stat"><span class="stat-label">BEST</span><span class="stat-value" id="over-best">0</span></div>
+        <div class="stat"><span class="stat-label">LEAVES</span><span class="stat-value gold" id="over-leaves">0</span></div>
+        <div class="stat"><span class="stat-label">DISTANCE</span><span class="stat-value" id="over-dist">0m</span></div>
+      </div>
+      <button class="btn big primary" id="btn-retry">RUN IT BACK</button>
+      <button class="btn" id="btn-over-menu">MENU</button>
+    </div>
+  </div>
+
+  <script src="vendor/three.global.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/obstacles.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
