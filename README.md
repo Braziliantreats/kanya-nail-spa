@@ -1,7 +1,8 @@
 # 🍃 Green Rush
 
-**A chill, cannabis-country endless runner** — Temple Run vibes, Bitmoji-style avatar
-customization, and a fully procedural world. Built with three.js, zero build step,
+**A chill, cannabis-country endless runner** — Temple Run vibes, claymation-style
+characters (think British stop-motion: googly eyes, huge molded grins, plasticine
+fingerprints), and a fully procedural world. Built with three.js, zero build step,
 zero external assets: every texture, character, sound, and song is generated in code
 at runtime.
 
@@ -39,16 +40,24 @@ Works great on phones — controls switch to swipe gestures automatically.
 | Slide | ▼ or S | swipe down |
 | Pause | P or Esc | ❚❚ button |
 
-## ✂ Customize your runner (Bitmoji-style)
+## 🎓 First run = guided tutorial
 
-Hit **CUSTOMIZE ME** and drag the character to spin them around. Everything is
-saved automatically to your browser:
+Your first RUN walks you through everything at a gentle pace — steering, jumping the
+crate, sliding under the pipe, grabbing leaves — with no way to lose. Skippable, and
+replayable any time from **HOW TO PLAY** in the menu.
+
+## ✂ Customize your runner (claymation-style)
+
+Hit **CUSTOMIZE ME** and drag the character to spin them around. Characters are
+built like stop-motion puppets — big close-set googly 3D eyes, thick clay brow slugs,
+a protruding muzzle with an enormous toothy grin, mitt hands, and a subtle
+fingerprint bump on every "plasticine" surface. Everything saves automatically:
 
 - **Body** — 12 skin tones, 3 builds, 3 heights
 - **Hair** — 12 styles (afro, locs, twin puffs, ponytail, mohawk, braids…) × 14 colors,
   with secondary physics — ponytails and locs actually swing while you run
-- **Face** — 5 eye styles (including *Half Baked*), 6 eye colors, 4 brows, 5 mouths,
-  facial hair, freckles, blush — painted onto the head like a real Bitmoji, with blinking
+- **Face** — 5 eye styles (including *Half Baked* heavy lids), 6 eye colors, 4 clay brow
+  shapes, 5 molded mouths, facial hair, freckles, blush — with squash-blinking
 - **Fits** — tees / hoodies / tanks / track jackets in 12 colors × 5 patterns
   (tie-dye! leaf print!), jeans / joggers / shorts / cargos, 10 sneaker colorways
 - **Extras** — beanies, dad caps (frontwards or backwards), bucket hats, headbands,
@@ -60,9 +69,10 @@ saved automatically to your browser:
 
 - Real-time **day/night cycle** — dawn, noon, sunset, and starry nights with fireflies;
   the dispensary’s neon sign flickers on after dark
-- Rolling **hemp fields** swaying in the wind (GPU-instanced, wind in the vertex shader)
+- Rolling **flowering hemp fields** swaying in the wind (GPU-instanced, wind in the
+  vertex shader) — colas, amber pistils and all — crowding right up to the fence line
 - Parallax mountain ridges, drifting clouds, greenhouses, barns, spinning windmills,
-  billboards, hay bales
+  KAYA FARMS billboards, hay bales, and a MILE 420 marker
 - Dynamic soft shadows, ACES filmic tone mapping, fog matched to the sky
 
 ## 🏃 The run

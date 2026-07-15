@@ -107,9 +107,28 @@
     _wireMenu() {
       this.$('btn-run').addEventListener('click', () => {
         GR.Audio.sfx('click');
-        this.game.startRun();
+        // first ever run gets the guided tutorial
+        const tutorial = !GR.Store.isTutorialDone();
+        this.game.startRun({ tutorial });
         this.show('hud');
-        this._runHint();
+        if (!tutorial) this._runHint();
+      });
+      this.$('btn-help').addEventListener('click', () => {
+        GR.Audio.sfx('click');
+        this.show('help');
+      });
+      this.$('btn-help-close').addEventListener('click', () => {
+        GR.Audio.sfx('click');
+        this.show('menu');
+      });
+      this.$('btn-tutorial').addEventListener('click', () => {
+        GR.Audio.sfx('click');
+        this.game.startRun({ tutorial: true });
+        this.show('hud');
+      });
+      this.$('tut-skip').addEventListener('click', () => {
+        GR.Audio.sfx('click');
+        this.game.endTutorial();
       });
       // keep the customizer camera framing in sync with the CSS breakpoint,
       // live across rotations/resizes
@@ -375,6 +394,21 @@
       this.game.callbacks.onState = (name) => {
         if (name === 'paused') this.show('pause');
         else if (name === 'running' && document.body.dataset.screen === 'pause') this.show('hud');
+      };
+      this.game.callbacks.onTut = (text, opts) => {
+        const el = this.$('tut-prompt');
+        const skip = this.$('tut-skip');
+        if (!text) {
+          el.classList.remove('show');
+          skip.classList.remove('show');
+          if (this.game.state === 'running') this._runHint();
+          return;
+        }
+        el.textContent = text;
+        el.classList.remove('show');
+        void el.offsetWidth; // restart pop animation
+        el.classList.add('show');
+        skip.classList.toggle('show', !!opts.skip);
       };
     }
   };

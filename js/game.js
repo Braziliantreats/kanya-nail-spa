@@ -10,7 +10,8 @@
       this.canvas = canvas;
       this.settings = settings;
       this.state = 'menu';
-      this.callbacks = { onScore: null, onGameOver: null, onPower: null, onState: null };
+      this.callbacks = { onScore: null, onGameOver: null, onPower: null, onState: null, onTut: null };
+      this.tut = null; // active tutorial state
 
       this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -104,7 +105,7 @@
       this.fx = [];
       // shared textures, per-sprite materials (each particle fades independently)
       this.fxKinds = {
-        dust: { map: dustTex('rgba(200,180,140,0.65)'), blending: THREE.NormalBlending },
+        dust: { map: dustTex('rgba(228,238,220,0.55)'), blending: THREE.NormalBlending }, // soft smoke puffs
         gold: { map: dustTex('rgba(255,215,90,0.9)'), blending: THREE.AdditiveBlending },
       };
       for (let i = 0; i < 40; i++) {
@@ -236,6 +237,7 @@
       if (n !== this.laneIdx) {
         this.laneIdx = n;
         GR.Audio.sfx('whoosh');
+        if (this.tut && this.tut.step === 0) this.tut.laneMoves++;
       }
     }
 
@@ -270,8 +272,12 @@
       if (this.callbacks.onState) this.callbacks.onState(name);
     }
 
-    startRun() {
+    startRun(opts) {
+      this.tut = opts && opts.tutorial
+        ? { step: -1, timer: 0.8, laneMoves: 0, ob: null, waitTokens: false }
+        : null;
       this.spawner.reset();
+      this.spawner.auto = !this.tut;
       this.laneIdx = 1;
       this.px = 0; this.py = 0; this.velY = 0;
       this.grounded = true;
@@ -317,6 +323,8 @@
       this.px = 0; this.py = 0;
       this.timeScale = 1;
       this.deathT = 0;
+      this.tut = null;
+      this._tutPrompt(null);
       this.animator.setState('idle');
       GR.Audio.setIntensity(0);
       this.spawner.reset();
@@ -361,9 +369,99 @@
       this.renderer.render(this.scene, this.camera);
     }
 
+    endTutorial() {
+      if (!this.tut) return;
+      this.tut = null;
+      this.spawner.auto = true;
+      GR.Store.setTutorialDone();
+      this._tutPrompt(null);
+    }
+
+    _tutPrompt(text, opts) {
+      if (this.callbacks.onTut) this.callbacks.onTut(text, opts || {});
+    }
+
+    /* scripted first-run lesson: steer → jump → slide → collect → go */
+    _updateTutorial(dt, ev) {
+      const t = this.tut;
+      t.timer -= dt;
+      const spawnAhead = -45;
+
+      // forgiving hits: smash the prop and try that step again
+      if (ev && ev.hit) {
+        this.spawner.smash(ev.hit);
+        this.shakeT = 0.25;
+        GR.Audio.sfx('slide');
+        t.ob = null;
+        t.timer = 1.2;
+        t.retry = true;
+      }
+
+      switch (t.step) {
+        case -1: // settle in
+          if (t.timer <= 0) {
+            t.step = 0;
+            t.laneMoves = 0;
+            this._tutPrompt('Welcome to the valley! Press ◀ ▶ (or swipe) to switch lanes', { skip: true });
+          }
+          break;
+        case 0:
+          if (t.laneMoves >= 2) {
+            t.step = 1;
+            t.timer = 0.8;
+            this._tutPrompt('Nice moves 🍃', { skip: true });
+          }
+          break;
+        case 1: // jump lesson
+          if (t.timer <= 0 && !t.ob) {
+            this.spawner.spawnObstacle('crate', this.laneIdx, spawnAhead);
+            t.ob = this.spawner.active[this.spawner.active.length - 1];
+            this._tutPrompt(t.retry ? 'Almost! JUMP the crate — ▲ / Space / swipe up' : 'A crate! JUMP it — ▲ / Space / swipe up', { skip: true });
+          }
+          if (t.ob && (!t.ob.live || t.ob.z > 2)) {
+            t.step = 2;
+            t.timer = 1.0;
+            t.ob = null;
+            t.retry = false;
+            this._tutPrompt('Cleared it! 🔥', { skip: true });
+          }
+          break;
+        case 2: // slide lesson
+          if (t.timer <= 0 && !t.ob) {
+            this.spawner.spawnObstacle('gantry', this.laneIdx, spawnAhead);
+            t.ob = this.spawner.active[this.spawner.active.length - 1];
+            this._tutPrompt(t.retry ? 'So close! SLIDE under — ▼ / swipe down' : 'Low pipe! SLIDE under — ▼ / swipe down', { skip: true });
+          }
+          if (t.ob && (!t.ob.live || t.ob.z > 2)) {
+            t.step = 3;
+            t.timer = 1.0;
+            t.ob = null;
+            t.retry = false;
+            this._tutPrompt('Smooth 😎', { skip: true });
+          }
+          break;
+        case 3: // token lesson
+          if (t.timer <= 0 && !t.waitTokens) {
+            for (let i = 0; i < 5; i++) this.spawner.spawnToken(this.laneIdx, spawnAhead - i * 2.2);
+            t.waitTokens = true;
+            this._tutPrompt('Grab the golden leaves!', { skip: true });
+          }
+          if (t.waitTokens && this.spawner.tokens.length === 0) {
+            t.step = 4;
+            t.timer = 2.2;
+            this._tutPrompt("That's everything — blaze on! 🍃", {});
+          }
+          break;
+        case 4:
+          if (t.timer <= 0) this.endTutorial();
+          break;
+      }
+    }
+
     _updateRun(dt) {
-      // speed ramp + distance
-      this.speed = Math.min(C.maxSpeed, this.speed + C.accel * dt);
+      // speed ramp + distance (tutorial holds a gentle fixed pace)
+      if (this.tut) this.speed = 8.5;
+      else this.speed = Math.min(C.maxSpeed, this.speed + C.accel * dt);
       this.dist += this.speed * dt;
 
       // lane movement
@@ -435,7 +533,10 @@
         if (this.callbacks.onPower) this.callbacks.onPower(ev.power);
         this._spawnFx('gold', this.px, this.py + 1.2, 0, 6, 0.4, 1.4);
       }
-      if (ev.hit && this.invulnT <= 0) {
+      if (this.tut) {
+        // tutorial: hits are forgiven inside the lesson script
+        this._updateTutorial(dt, ev);
+      } else if (ev.hit && this.invulnT <= 0) {
         if (this.shieldT > 0) {
           this.shieldT = 0;
           this.invulnT = 1.2;

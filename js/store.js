@@ -43,6 +43,14 @@
     getStats() {
       return Object.assign({ best: 0, leaves: 0, runs: 0 }, read().stats || {});
     },
+    isTutorialDone() {
+      return !!read().tutorialDone;
+    },
+    setTutorialDone() {
+      const data = read();
+      data.tutorialDone = true;
+      write(data);
+    },
     /* record a finished run; returns updated stats + whether it's a new best */
     addRun(score, leaves) {
       const data = read();

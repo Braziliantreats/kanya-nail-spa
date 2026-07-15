@@ -116,6 +116,7 @@
       this.tokenPool = [];
       this.powerPools = { magnet: [], shield: [], boost: [] };
       this.gapLeft = 30;     // distance until next pattern
+      this.auto = true;      // pattern auto-spawning (off during the tutorial)
       this.t = 0;
 
       /* shared materials */
@@ -496,10 +497,12 @@
       const move = speed * dt;
 
       // spawn cadence
-      this.gapLeft -= move;
-      if (this.gapLeft <= 0) {
-        const len = this._pattern(diff);
-        this.gapLeft = len + GR.lerp(20, 7, diff) + GR.rand(0, 6);
+      if (this.auto) {
+        this.gapLeft -= move;
+        if (this.gapLeft <= 0) {
+          const len = this._pattern(diff);
+          this.gapLeft = len + GR.lerp(20, 7, diff) + GR.rand(0, 6);
+        }
       }
 
       const pb = C.playerBox;

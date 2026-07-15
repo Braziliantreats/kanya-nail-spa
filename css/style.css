@@ -361,6 +361,66 @@ html, body {
 }
 #run-hint.show { opacity: 0.9; }
 
+/* ---------------------------------------------------- help + tutorial */
+.help-panel { max-width: 520px; }
+.help-grid { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.help-row {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.help-key { font-weight: 800; color: var(--green); }
+.help-key.gold { color: var(--gold); }
+
+#tut-prompt {
+  position: fixed;
+  bottom: 17%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  max-width: min(88vw, 560px);
+  text-align: center;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  background: rgba(8, 18, 11, 0.78);
+  border: 1px solid rgba(140, 255, 170, 0.35);
+  border-radius: 16px;
+  padding: 14px 22px;
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+#tut-prompt.show { animation: tutpop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) forwards; }
+@keyframes tutpop {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px) scale(0.9); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+#tut-skip {
+  display: none;
+  position: fixed;
+  top: 74px;
+  right: 18px;
+  z-index: 12;
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: rgba(238, 247, 239, 0.75);
+  background: rgba(8, 18, 11, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 8px 14px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+#tut-skip.show { display: block; }
+
 /* ---------------------------------------------------- game over */
 .over-score {
   font-size: 62px;

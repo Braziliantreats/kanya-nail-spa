@@ -37,8 +37,30 @@
       </div>
       <button class="btn big primary" id="btn-run">▶&nbsp;&nbsp;RUN</button>
       <button class="btn big" id="btn-custom">✂&nbsp;&nbsp;CUSTOMIZE ME</button>
+      <button class="btn big" id="btn-help">❓&nbsp;&nbsp;HOW TO PLAY</button>
       <div class="toggles" id="menu-toggles"></div>
       <p class="fineprint">◀ ▶ steer · ▲ jump · ▼ slide — or swipe on mobile</p>
+    </div>
+  </div>
+
+  <!-- ======================= HOW TO PLAY ======================= -->
+  <div class="screen" id="screen-help">
+    <div class="panel help-panel">
+      <h2 class="title small">HOW TO PLAY</h2>
+      <div class="help-grid">
+        <div class="help-row"><span class="help-key">◀ ▶ / swipe</span><span>Switch lanes to dodge tractors, vans &amp; crate stacks</span></div>
+        <div class="help-row"><span class="help-key">▲ / Space / swipe up</span><span>Jump crates, barrels &amp; road barriers</span></div>
+        <div class="help-row"><span class="help-key">▼ / swipe down</span><span>Slide under drying racks &amp; low pipes (also slams you down mid-air)</span></div>
+        <div class="help-row"><span class="help-key">P / Esc</span><span>Pause</span></div>
+      </div>
+      <div class="help-grid">
+        <div class="help-row"><span class="help-key gold">🍃 Leaf</span><span>+15 points each — grab every one</span></div>
+        <div class="help-row"><span class="help-key gold">🧲 Magnet</span><span>Pulls nearby leaves to you for 8s</span></div>
+        <div class="help-row"><span class="help-key gold">🛡 Zen Shield</span><span>Absorbs one crash</span></div>
+        <div class="help-row"><span class="help-key gold">✨ ×2</span><span>Double score for 10s</span></div>
+      </div>
+      <button class="btn big primary" id="btn-help-close">GOT IT</button>
+      <button class="btn" id="btn-tutorial">🎓 REPLAY TUTORIAL</button>
     </div>
   </div>
 
@@ -73,6 +95,8 @@
     </div>
     <div id="toast"></div>
     <div id="run-hint"></div>
+    <div id="tut-prompt"></div>
+    <button id="tut-skip">skip tutorial ➜</button>
   </div>
 
   <!-- ======================= PAUSE ======================= -->

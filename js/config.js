@@ -126,6 +126,21 @@
     for (const [sx, sy, ss, rot] of spots) {
       GR.drawLeaf(ctx, px * sx, px * sy, px * ss, GR.pick(greens), rot);
     }
+    // flowering cola up top + amber pistils, so the plant is unmistakable
+    const budCols = ['#5f7d33', '#6f8f3a', '#557029', '#7a9a40'];
+    for (let i = 0; i < 14; i++) {
+      const by = px * (0.34 - i * 0.017);
+      ctx.fillStyle = GR.pick(budCols);
+      ctx.beginPath();
+      ctx.ellipse(px * 0.5 + GR.rand(-px * 0.05, px * 0.05), by, px * GR.rand(0.035, 0.055), px * GR.rand(0.025, 0.04), GR.rand(-0.6, 0.6), 0, GR.TAU);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#e8963f';
+    for (let i = 0; i < 16; i++) {
+      ctx.beginPath();
+      ctx.arc(px * 0.5 + GR.rand(-px * 0.06, px * 0.06), px * GR.rand(0.1, 0.34), px * 0.008, 0, GR.TAU);
+      ctx.fill();
+    }
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
@@ -258,10 +273,10 @@
     height: 'medium',
     hairStyle: 'short',
     hairColor: '#2e2118',
-    eyeStyle: 'chill',
+    eyeStyle: 'round',
     eyeColor: '#3a2a1c',
-    brow: 'soft',
-    mouth: 'smile',
+    brow: 'thick',
+    mouth: 'grin',
     facialHair: 'none',
     freckles: false,
     blush: true,

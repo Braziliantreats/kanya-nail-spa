@@ -433,10 +433,11 @@
           continue;
         }
         const side = i % 2 === 0 ? -1 : 1;
-        const far = i % 5 === 0; // every 5th plant sits deep in the field
-        const x = side * (far ? GR.rand(16, 60) : GR.rand(6.4, 15));
+        const far = i % 5 === 0;  // every 5th plant sits deep in the field
+        const hero = i % 7 === 3; // and some crowd right up against the fence
+        const x = side * (hero ? GR.rand(4.9, 5.4) : far ? GR.rand(16, 60) : GR.rand(6.4, 15));
         const z = GR.rand(-L / 2, L / 2);
-        const s = far ? GR.rand(1.8, 3.4) : GR.rand(0.9, 1.9);
+        const s = far ? GR.rand(1.8, 3.4) : hero ? GR.rand(1.4, 2.1) : GR.rand(0.9, 1.9);
         q.setFromAxisAngle(up, GR.rand(0, GR.TAU));
         pos.set(x, 0, z);
         scl.set(s, s, s);
@@ -548,6 +549,33 @@
       nLeg.position.y = 1.3;
       neon.add(nLeg);
       add(neon, 8.5, 12);
+
+      // MILE 420 marker
+      const mileTex = (() => {
+        const { canvas, ctx } = GR.makeCanvas(128, 160);
+        ctx.fillStyle = '#1e6e46';
+        ctx.fillRect(0, 0, 128, 160);
+        ctx.strokeStyle = '#f4f1ea';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(6, 6, 116, 148);
+        ctx.fillStyle = '#f4f1ea';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 34px Arial, sans-serif';
+        ctx.fillText('MILE', 64, 62);
+        ctx.font = 'bold 52px Arial, sans-serif';
+        ctx.fillText('420', 64, 122);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+      })();
+      const mile = new THREE.Group();
+      const milePanel = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.25, 0.08), new THREE.MeshLambertMaterial({ map: mileTex }));
+      milePanel.position.y = 1.7;
+      mile.add(milePanel);
+      const milePost = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.2, 8), legMat);
+      milePost.position.y = 0.6;
+      mile.add(milePost);
+      add(mile, 5.6, 7);
 
       // hay bales + rocks near the road
       const hayMat = new THREE.MeshLambertMaterial({ color: 0xc9a862 });
