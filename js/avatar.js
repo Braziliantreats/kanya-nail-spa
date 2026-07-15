@@ -57,10 +57,10 @@
   }
 
   /* -------------------------------------------------- head painting
-     Claymation-style: eyes and brows are 3D geometry. The head texture only
-     carries skin, cheeks and freckles; the muzzle texture carries the big
-     molded mouth. Both spheres are rotated so canvas-center faces -Z. */
-  function paintHeadTex(cfg) {
+     Claymation-style: eyes and brows are 3D geometry. The mouth is painted
+     flat on the face plane (no snout — a protruding muzzle reads as an
+     animal, not a person). Head sphere is rotated so canvas-center → -Z. */
+  function paintHeadTex(cfg, variant) {
     const S = 512;
     const { canvas, ctx } = GR.makeCanvas(S, S);
     ctx.fillStyle = cfg.skin;
@@ -70,103 +70,92 @@
       ctx.fillStyle = 'rgba(235,120,110,0.35)';
       for (const s of [-1, 1]) {
         ctx.beginPath();
-        ctx.ellipse(cx + s * 98, 308, 26, 16, 0, 0, GR.TAU);
+        ctx.ellipse(cx + s * 106, 296, 24, 15, 0, 0, GR.TAU);
         ctx.fill();
       }
     }
     if (cfg.freckles) {
       ctx.fillStyle = 'rgba(90,50,30,0.5)';
-      const spots = [[-84, 296], [-64, 308], [-98, 316], [84, 298], [66, 310], [100, 314], [-74, 322], [78, 324]];
+      const spots = [[-86, 272], [-66, 282], [-100, 288], [86, 274], [68, 284], [102, 288], [-76, 264], [78, 262]];
       for (const [dx, dy] of spots) {
         ctx.beginPath();
         ctx.arc(cx + dx, dy, 4, 0, GR.TAU);
         ctx.fill();
       }
     }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 4;
-    return tex;
-  }
 
-  /* huge cheek-to-cheek molded mouth on the muzzle ball */
-  function paintMuzzleTex(cfg, variant) {
-    const S = 256;
-    const { canvas, ctx } = GR.makeCanvas(S, S);
-    ctx.fillStyle = shade(cfg.skin, 0.09);
-    ctx.fillRect(0, 0, S, S);
-    const cx = 128, cy = 118;
+    /* the big molded mouth, flat on the face */
+    const cy = 318;
     const lineCol = '#5a2f24';
     ctx.strokeStyle = lineCol;
     ctx.lineCap = 'round';
     const mouth = variant === 'dizzy' ? 'dizzy' : cfg.mouth;
     if (mouth === 'grin') {
-      // the trademark enormous clay grin, teeth and all
       ctx.beginPath();
-      ctx.moveTo(cx - 88, cy - 16);
-      ctx.quadraticCurveTo(cx, cy + 78, cx + 88, cy - 16);
-      ctx.quadraticCurveTo(cx, cy + 18, cx - 88, cy - 16);
+      ctx.moveTo(cx - 80, cy - 14);
+      ctx.quadraticCurveTo(cx, cy + 66, cx + 80, cy - 14);
+      ctx.quadraticCurveTo(cx, cy + 16, cx - 80, cy - 14);
       ctx.closePath();
       ctx.fillStyle = '#fdf8ee';
       ctx.fill();
-      ctx.lineWidth = 9;
+      ctx.lineWidth = 8;
       ctx.stroke();
-      // tooth seams
       ctx.lineWidth = 4;
-      for (const dx of [-44, 0, 44]) {
+      for (const dx of [-40, 0, 40]) {
         ctx.beginPath();
-        ctx.moveTo(cx + dx, cy + (dx === 0 ? 8 : -2));
-        ctx.lineTo(cx + dx, cy + (dx === 0 ? 46 : 26));
+        ctx.moveTo(cx + dx, cy + (dx === 0 ? 7 : -3));
+        ctx.lineTo(cx + dx, cy + (dx === 0 ? 40 : 22));
         ctx.stroke();
       }
     } else if (mouth === 'smile') {
-      ctx.lineWidth = 11;
+      ctx.lineWidth = 10;
       ctx.beginPath();
-      ctx.moveTo(cx - 74, cy - 8);
-      ctx.quadraticCurveTo(cx, cy + 52, cx + 74, cy - 8);
+      ctx.moveTo(cx - 66, cy - 8);
+      ctx.quadraticCurveTo(cx, cy + 44, cx + 66, cy - 8);
       ctx.stroke();
     } else if (mouth === 'smirk') {
-      ctx.lineWidth = 11;
+      ctx.lineWidth = 10;
       ctx.beginPath();
-      ctx.moveTo(cx - 40, cy + 12);
-      ctx.quadraticCurveTo(cx + 30, cy + 34, cx + 74, cy - 14);
+      ctx.moveTo(cx - 36, cy + 10);
+      ctx.quadraticCurveTo(cx + 26, cy + 30, cx + 66, cy - 12);
       ctx.stroke();
     } else if (mouth === 'open') {
       ctx.fillStyle = '#54231c';
       ctx.beginPath();
-      ctx.ellipse(cx, cy + 12, 52, 40, 0, 0, GR.TAU);
+      ctx.ellipse(cx, cy + 8, 46, 34, 0, 0, GR.TAU);
       ctx.fill();
-      ctx.lineWidth = 8;
+      ctx.lineWidth = 7;
       ctx.stroke();
       ctx.fillStyle = '#e0697a';
       ctx.beginPath();
-      ctx.ellipse(cx, cy + 32, 28, 15, 0, 0, GR.TAU);
+      ctx.ellipse(cx, cy + 26, 25, 13, 0, 0, GR.TAU);
       ctx.fill();
       ctx.fillStyle = '#fdf8ee';
-      ctx.fillRect(cx - 34, cy - 24, 68, 14);
+      ctx.fillRect(cx - 30, cy - 22, 60, 12);
     } else if (mouth === 'tongue') {
-      ctx.lineWidth = 11;
+      ctx.lineWidth = 10;
       ctx.beginPath();
-      ctx.moveTo(cx - 66, cy - 6);
-      ctx.quadraticCurveTo(cx, cy + 46, cx + 66, cy - 6);
+      ctx.moveTo(cx - 60, cy - 6);
+      ctx.quadraticCurveTo(cx, cy + 40, cx + 60, cy - 6);
       ctx.stroke();
       ctx.fillStyle = '#e0697a';
       ctx.beginPath();
-      ctx.ellipse(cx + 26, cy + 34, 22, 26, 0.25, 0, GR.TAU);
+      ctx.ellipse(cx + 24, cy + 28, 20, 24, 0.25, 0, GR.TAU);
       ctx.fill();
       ctx.strokeStyle = '#b04a5c';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(cx + 22, cy + 18);
-      ctx.lineTo(cx + 32, cy + 50);
+      ctx.moveTo(cx + 20, cy + 14);
+      ctx.lineTo(cx + 30, cy + 44);
       ctx.stroke();
     } else {
       // dizzy: wobbly little 'o'
-      ctx.lineWidth = 9;
+      ctx.lineWidth = 8;
       ctx.beginPath();
-      ctx.ellipse(cx, cy + 10, 22, 28, 0.15, 0, GR.TAU);
+      ctx.ellipse(cx, cy + 8, 20, 25, 0.15, 0, GR.TAU);
       ctx.stroke();
     }
+
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
@@ -574,21 +563,14 @@
     neck.add(headGrp);
 
     // no bump on the face — it fights the toon steps and looks patchy
-    const headMat = track(GR.toonMat({ map: track(paintHeadTex(cfg)) }));
+    const headTex = {
+      normal: track(paintHeadTex(cfg, 'normal')),
+      dizzy: track(paintHeadTex(cfg, 'dizzy')),
+    };
+    const headMat = track(GR.toonMat({ map: headTex.normal }));
     const head = mesh(track(new THREE.SphereGeometry(R, 32, 24)), headMat, 0, 0, 0);
     head.rotation.y = Math.PI / 2; // texture center → -Z
     headGrp.add(head);
-
-    /* muzzle — the protruding lower-face mass that carries the big mouth */
-    const muzzleTex = {
-      normal: track(paintMuzzleTex(cfg, 'normal')),
-      dizzy: track(paintMuzzleTex(cfg, 'dizzy')),
-    };
-    const muzzleMat = track(GR.toonMat({ map: muzzleTex.normal }));
-    const muzzle = mesh(track(new THREE.SphereGeometry(R * 0.62, 24, 18)), muzzleMat, 0, -R * 0.42, -R * 0.6);
-    muzzle.rotation.y = Math.PI / 2;
-    muzzle.scale.set(1.28, 0.85, 0.8);
-    headGrp.add(muzzle);
 
     /* googly clay eyes: big close-set white balls, proud of the face */
     const eyeWhiteMat = track(new THREE.MeshStandardMaterial({ color: 0xfdfaf2, roughness: 0.55 }));
@@ -640,7 +622,7 @@
       ear.scale.set(0.5, 1.05, 0.85);
       headGrp.add(ear);
     }
-    const nose = mesh(track(new THREE.SphereGeometry(R * 0.17, 14, 12)), skinMat, 0, R * 0.02, -R * 1.0);
+    const nose = mesh(track(new THREE.SphereGeometry(R * 0.16, 14, 12)), skinMat, 0, -R * 0.05, -R * 1.0);
     nose.scale.set(1, 0.9, 0.95);
     headGrp.add(nose);
 
@@ -648,21 +630,21 @@
     const fhMat = track(clayMat(cfg.hairColor));
     if (cfg.facialHair === 'mustache') {
       for (const sx of [-1, 1]) {
-        const mo = mesh(track(new THREE.SphereGeometry(R * 0.24, 12, 8)), fhMat, sx * R * 0.22, -R * 0.2, -R * 1.04);
-        mo.scale.set(1.25, 0.42, 0.45);
+        const mo = mesh(track(new THREE.SphereGeometry(R * 0.22, 12, 8)), fhMat, sx * R * 0.2, -R * 0.22, -R * 0.94);
+        mo.scale.set(1.25, 0.4, 0.42);
         mo.rotation.z = sx * -0.25;
         headGrp.add(mo);
       }
     } else if (cfg.facialHair === 'goatee') {
-      const gt = mesh(track(new THREE.SphereGeometry(R * 0.28, 12, 8)), fhMat, 0, -R * 0.86, -R * 0.66);
-      gt.scale.set(0.95, 0.9, 0.6);
+      const gt = mesh(track(new THREE.SphereGeometry(R * 0.26, 12, 8)), fhMat, 0, -R * 0.7, -R * 0.66);
+      gt.scale.set(0.95, 0.85, 0.55);
       headGrp.add(gt);
     } else if (cfg.facialHair === 'beard') {
-      const chin = mesh(track(new THREE.SphereGeometry(R * 0.46, 14, 10)), fhMat, 0, -R * 0.84, -R * 0.36);
-      chin.scale.set(1.4, 0.75, 0.95);
+      const chin = mesh(track(new THREE.SphereGeometry(R * 0.44, 14, 10)), fhMat, 0, -R * 0.7, -R * 0.32);
+      chin.scale.set(1.35, 0.7, 0.95);
       headGrp.add(chin);
       for (const sx of [-1, 1]) {
-        const jaw = mesh(track(new THREE.SphereGeometry(R * 0.32, 12, 8)), fhMat, sx * R * 0.68, -R * 0.42, -R * 0.32);
+        const jaw = mesh(track(new THREE.SphereGeometry(R * 0.3, 12, 8)), fhMat, sx * R * 0.66, -R * 0.36, -R * 0.34);
         jaw.scale.set(0.6, 1.0, 0.95);
         headGrp.add(jaw);
       }
@@ -719,7 +701,7 @@
       setFace(name) {
         if (this._face === name) return;
         this._face = name;
-        muzzleMat.map = name === 'dizzy' ? muzzleTex.dizzy : muzzleTex.normal;
+        headMat.map = name === 'dizzy' ? headTex.dizzy : headTex.normal;
         for (let i = 0; i < face.eyes.length; i++) {
           const e = face.eyes[i];
           const p = face.pupils[i];
