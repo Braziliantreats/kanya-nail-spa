@@ -314,19 +314,19 @@
       const L = C.segLen, N = C.segCount;
       this.segments = [];
       this.roadTex = roadTexture();
-      const roadMat = new THREE.MeshStandardMaterial({ map: this.roadTex, roughness: 0.95 });
+      const roadMat = GR.toonMat({ map: this.roadTex });
       const roadGeo = new THREE.PlaneGeometry(7.6, L);
-      const grassMat = new THREE.MeshLambertMaterial({ color: 0x5d8544 });
+      const grassMat = GR.toonMat({ color: 0x619150 });
       const grassGeo = new THREE.PlaneGeometry(260, L);
-      const dirtMat = new THREE.MeshLambertMaterial({ color: 0x7d6a4f });
+      const dirtMat = GR.toonMat({ color: 0x7d6a4f });
       const dirtGeo = new THREE.PlaneGeometry(1.7, L);
-      const fenceMat = new THREE.MeshLambertMaterial({ color: 0x8a6b48 });
+      const fenceMat = GR.toonMat({ color: 0x8a6b48 });
 
       // plant crossed-plane geometry (unit height)
       const plantGeo = this._plantGeometry();
       this.plantTex = GR.plantTexture(256);
       this.windUniform = { value: 0 };
-      const plantMat = new THREE.MeshLambertMaterial({ map: this.plantTex, alphaTest: 0.5, side: THREE.DoubleSide });
+      const plantMat = GR.toonMat({ map: this.plantTex, alphaTest: 0.5, side: THREE.DoubleSide });
       const windU = this.windUniform;
       plantMat.onBeforeCompile = (shader) => {
         shader.uniforms.uTime = windU;

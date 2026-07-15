@@ -25,6 +25,7 @@
       return;
     }
     const ui = new GR.UI(game, settings);
+    GR.game = game; // handy for debugging/testing from the console
 
     const onResize = () => game.resize(window.innerWidth, window.innerHeight);
     window.addEventListener('resize', onResize);

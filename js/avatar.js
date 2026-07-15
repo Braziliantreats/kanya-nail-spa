@@ -50,10 +50,10 @@
   }
 
   function clayMat(color, opts) {
-    return new THREE.MeshStandardMaterial(Object.assign(
-      { color, roughness: 0.96, metalness: 0, bumpMap: getClayBump(), bumpScale: 0.02 },
-      opts || {}
-    ));
+    // cel-shaded plasticine: stepped toon lighting + subtle fingerprint bump
+    const o = Object.assign({ color, bumpMap: getClayBump(), bumpScale: 0.012 }, opts || {});
+    delete o.roughness; // toon material has no roughness
+    return GR.toonMat(o);
   }
 
   /* -------------------------------------------------- head painting
@@ -441,7 +441,7 @@
     /* materials — matte plasticine with a fingerprint bump */
     const skinMat = track(clayMat(cfg.skin));
     const patternTex = track(paintPattern(cfg.topColor, cfg.pattern));
-    const torsoMat = track(new THREE.MeshStandardMaterial({ map: patternTex, roughness: 0.96, bumpMap: getClayBump(), bumpScale: 0.02 }));
+    const torsoMat = track(GR.toonMat({ map: patternTex, bumpMap: getClayBump(), bumpScale: 0.02 }));
     const topPlainMat = track(clayMat(cfg.topColor));
     const bottomMat = track(clayMat(cfg.bottomColor));
     const shoeMat = track(clayMat(cfg.shoeColor, { roughness: 0.7 }));
@@ -573,9 +573,8 @@
     headGrp.scale.set(0.94, 1.16, 0.96); // tall clay oval
     neck.add(headGrp);
 
-    const headMat = track(new THREE.MeshStandardMaterial({
-      map: track(paintHeadTex(cfg)), roughness: 0.96, bumpMap: getClayBump(), bumpScale: 0.02,
-    }));
+    // no bump on the face — it fights the toon steps and looks patchy
+    const headMat = track(GR.toonMat({ map: track(paintHeadTex(cfg)) }));
     const head = mesh(track(new THREE.SphereGeometry(R, 32, 24)), headMat, 0, 0, 0);
     head.rotation.y = Math.PI / 2; // texture center → -Z
     headGrp.add(head);
@@ -585,9 +584,7 @@
       normal: track(paintMuzzleTex(cfg, 'normal')),
       dizzy: track(paintMuzzleTex(cfg, 'dizzy')),
     };
-    const muzzleMat = track(new THREE.MeshStandardMaterial({
-      map: muzzleTex.normal, roughness: 0.96, bumpMap: getClayBump(), bumpScale: 0.02,
-    }));
+    const muzzleMat = track(GR.toonMat({ map: muzzleTex.normal }));
     const muzzle = mesh(track(new THREE.SphereGeometry(R * 0.62, 24, 18)), muzzleMat, 0, -R * 0.42, -R * 0.6);
     muzzle.rotation.y = Math.PI / 2;
     muzzle.scale.set(1.28, 0.85, 0.8);
@@ -607,6 +604,8 @@
       eg.add(white);
       const iris = mesh(track(new THREE.SphereGeometry(eyeR * 0.44, 12, 10)), irisMat, 0, -eyeR * 0.05, -eyeR * 0.72);
       const pupil = mesh(track(new THREE.SphereGeometry(eyeR * 0.26, 10, 8)), pupilMat, 0, -eyeR * 0.05, -eyeR * 0.92);
+      iris.userData.noOutline = true;
+      pupil.userData.noOutline = true;
       eg.add(iris, pupil);
       // heavy clay lid (skin ball shifted up to hood the eye)
       if (lidAmount < 2) {
@@ -683,6 +682,23 @@
     if (glasses) headGrp.add(glasses);
     const phones = buildHeadExtra(cfg, R);
     if (phones) headGrp.add(phones);
+
+    /* ------ ink outlines: inverted-hull pass over every clay piece */
+    const outlineMat = track(new THREE.MeshBasicMaterial({ color: 0x2a1c12, side: THREE.BackSide }));
+    const outlineTargets = [];
+    group.traverse((o) => {
+      if (!o.isMesh || o.userData.noOutline) return;
+      if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+      if (o.geometry.boundingSphere.radius < 0.05) return; // skip tiny trim pieces
+      outlineTargets.push(o);
+    });
+    for (const o of outlineTargets) {
+      const hull = new THREE.Mesh(o.geometry, outlineMat);
+      hull.scale.setScalar(1.05);
+      hull.castShadow = false;
+      hull.userData.noOutline = true;
+      o.add(hull);
+    }
 
     /* ------ public interface */
     const avatar = {

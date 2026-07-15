@@ -42,6 +42,29 @@
     return { canvas, ctx: canvas.getContext('2d') };
   };
 
+  /* shared stepped-lighting ramp for the cel/toon look */
+  let _toonRamp = null;
+  GR.toonRamp = function () {
+    if (_toonRamp) return _toonRamp;
+    // wide flat bands with narrow linear transitions: crisp cel steps without
+    // the sampling noise a tiny NearestFilter ramp produces
+    const colors = new Uint8Array([
+      112, 112, 112, 112,
+      165, 165, 165, 165,
+      218, 218, 218, 218,
+      255, 255, 255, 255,
+    ]);
+    _toonRamp = new THREE.DataTexture(colors, colors.length, 1, THREE.RedFormat);
+    _toonRamp.minFilter = THREE.LinearFilter;
+    _toonRamp.magFilter = THREE.LinearFilter;
+    _toonRamp.needsUpdate = true;
+    return _toonRamp;
+  };
+
+  GR.toonMat = function (opts) {
+    return new THREE.MeshToonMaterial(Object.assign({ gradientMap: GR.toonRamp() }, opts));
+  };
+
   /* ------------------------------------------------ cannabis leaf art
      Draws a stylized 7-fingered leaf centered at (x, y).
      size = length of the biggest (center) finger. */
