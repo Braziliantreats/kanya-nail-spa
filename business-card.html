@@ -1,0 +1,338 @@
+<title>WeGen Digital Pulse — Business Card</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --page-bg:#0b0d10;
+    --page-fg:#e9edf3;
+    --page-muted:#8b95a3;
+    --panel:#141922;
+    --hair:rgba(255,255,255,.08);
+    --shadow:0 30px 60px -20px rgba(0,0,0,.7), 0 8px 20px -8px rgba(0,0,0,.6);
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --page-bg:#eceef2; --page-fg:#1a1f27; --page-muted:#5c6673; --panel:#ffffff; --hair:rgba(0,0,0,.08); }
+  }
+  :root[data-theme="dark"]{ --page-bg:#0b0d10; --page-fg:#e9edf3; --page-muted:#8b95a3; --panel:#141922; --hair:rgba(255,255,255,.08); }
+  :root[data-theme="light"]{ --page-bg:#eceef2; --page-fg:#1a1f27; --page-muted:#5c6673; --panel:#ffffff; --hair:rgba(0,0,0,.08); }
+
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--page-bg); color:var(--page-fg);
+    font-family:'Helvetica Neue',Arial,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+    padding:clamp(20px,5vw,64px) clamp(16px,4vw,48px) 80px;
+  }
+  .wrap{ max-width:760px; margin:0 auto; }
+  header.intro{ margin-bottom:28px; }
+  .eyebrow{
+    font-family:ui-monospace,'SF Mono','Cascadia Code',Menlo,monospace;
+    font-size:11px; letter-spacing:.28em; text-transform:uppercase;
+    color:#2e9bff; margin:0 0 10px;
+  }
+  h1{ font-size:clamp(24px,4.4vw,34px); font-weight:800; letter-spacing:-.02em; margin:0 0 8px; }
+  .lede{ color:var(--page-muted); font-size:15px; max-width:60ch; margin:0; }
+
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:24px 0 30px; }
+  .seg{ display:inline-flex; background:var(--panel); border:1px solid var(--hair); border-radius:999px; padding:4px; }
+  .seg button{
+    font:inherit; font-size:13px; font-weight:600; letter-spacing:.01em;
+    border:0; background:transparent; color:var(--page-muted);
+    padding:8px 16px; border-radius:999px; cursor:pointer; transition:.18s;
+  }
+  .seg button[aria-pressed="true"]{ background:#2e9bff; color:#fff; box-shadow:0 4px 14px -4px rgba(46,155,255,.7); }
+  :root[data-ed="oxblood"] .seg button[aria-pressed="true"]{ background:#d8324a; box-shadow:0 4px 14px -4px rgba(216,50,74,.7); }
+  .seg.persona button[aria-pressed="true"]{ background:transparent; color:var(--page-fg); border:1px solid var(--hair); box-shadow:none; }
+
+  .cardlabel{
+    font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.24em;
+    text-transform:uppercase; color:var(--page-muted); margin:34px 0 12px; display:flex; align-items:center; gap:10px;
+  }
+  .cardlabel::after{ content:""; flex:1; height:1px; background:var(--hair); }
+
+  .card{
+    width:100%; aspect-ratio:1050/600; border-radius:16px; overflow:hidden;
+    box-shadow:var(--shadow); background:#0a0d12;
+  }
+  .card svg{ display:block; width:100%; height:100%; }
+
+  .notes{
+    margin-top:40px; padding:20px 22px; background:var(--panel); border:1px solid var(--hair);
+    border-radius:14px; font-size:14px; color:var(--page-muted);
+  }
+  .notes h2{ font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--page-fg); margin:0 0 12px; }
+  .notes ul{ margin:0; padding-left:18px; display:grid; gap:8px; }
+  .notes b{ color:var(--page-fg); font-weight:600; }
+  .tag{ font-family:ui-monospace,Menlo,monospace; font-size:12px; color:#2e9bff; }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <p class="eyebrow">Identity System · v1</p>
+    <h1>WeGen Digital Pulse — Business Card</h1>
+    <p class="lede">Instrument-grade redesign. Engineered PCB traces frame a protected clear zone, the EKG pulse becomes the hero line, and the QR is rebuilt as a diagnostic module — still scannable, styled as a design element.</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Edition">
+      <button data-ed="signal" aria-pressed="true">Signal Blue</button>
+      <button data-ed="oxblood" aria-pressed="false">Oxblood</button>
+    </div>
+    <div class="seg persona" role="group" aria-label="Cardholder">
+      <button data-persona="0" aria-pressed="true">Partner A</button>
+      <button data-persona="1" aria-pressed="false">Partner B</button>
+    </div>
+  </div>
+
+  <p class="cardlabel">Front</p>
+  <div class="card"><svg id="front" viewBox="0 0 1050 600" role="img" aria-label="WeGen Digital Pulse business card, front"></svg></div>
+
+  <p class="cardlabel">Back</p>
+  <div class="card"><svg id="back" viewBox="0 0 1050 600" role="img" aria-label="WeGen Digital Pulse business card, back"></svg></div>
+
+  <div class="notes">
+    <h2>Notes</h2>
+    <ul>
+      <li><b>Real, scannable QR</b> → points to <span class="tag">wegendigital.com</span> (high error-correction, so the center monogram and custom eyes don't break the scan).</li>
+      <li><b>Names & titles are placeholders.</b> Toggle Partner A / B to see both. Send me the real names and I'll drop them in — suggested default roles are set.</li>
+      <li><b>Oxblood edition</b> is your red idea done premium: a near-black ground with a disciplined crimson signal — not the bright red that reads cheap.</li>
+      <li><b>Print-ready proportions</b> (3.5″×2″). For a real print file I can export at 300&nbsp;dpi with 1/8″ bleed.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const MATRIX = ["11111110000101111010001111111","10000010100001010101001000001","10111010000110100111101011101","10111010011101000011001011101","10111010010100110110001011101","10000010110010100001001000001","11111110101010101010101111111","00000000100111010110100000000","00001111011000000011101100010","11001100011000011110001110111","00001010000111010100110100001","01100101001000110101010001011","01101010010100110101100101001","11101100111011011110001010101","10101111100010000000111010001","00001100001111101111101101010","00011110100110001111110100011","11011101100110010110001111001","00001011110110001000000001001","00110101100110000011100111011","11001111010011110110111111001","00000000111000111010100010101","11111110101101000001101010001","10000010100110101001100011001","10111010110000101011111110010","10111010010111010010000100110","10111010000111100001110001111","10000010011111011110100101011","11111110010101010111100011010"];
+
+const EDITIONS = {
+  signal: {
+    bg1:'#0c1119', bg2:'#070a0f', vignette:'#000308',
+    copper:'#4a6b86', copperDim:'#2b3d4d',
+    accent:'#2e9bff', accentBright:'#7cc0ff', accentDeep:'#0a4fa8',
+    steelA:'#f6f9fd', steelB:'#c6d0da', steelC:'#8b95a2', steelD:'#5f6975', steelE:'#dfe6ee',
+    tagline:'#9fb0c2', taglineHi:'#7cc0ff', qrMod:'#e8eef5'
+  },
+  oxblood: {
+    bg1:'#160b0d', bg2:'#0a0405', vignette:'#050001',
+    copper:'#8a4a44', copperDim:'#4d2824',
+    accent:'#e5384a', accentBright:'#ff8a90', accentDeep:'#8a1220',
+    steelA:'#fbf6f6', steelB:'#dcc9ca', steelC:'#b08e90', steelD:'#7a5a5c', steelE:'#efe0e1',
+    tagline:'#c99ea1', taglineHi:'#ff8a90', qrMod:'#f2e8e8'
+  }
+};
+
+const PERSONAS = [
+  { name:'Alex Rivera',  role:'Founder · Security & Compliance', email:'alex@wegendigital.com', phone:'(555) 019-2834' },
+  { name:'Tim Sullivan', role:'Founder · Digital Strategy',      email:'tim@wegendigital.com',  phone:'(555) 019-4471' }
+];
+
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+// ---- Engineered PCB traces: orthogonal grid walk fading into a clear zone ----
+function buildCircuits(seed, p, opts){
+  const gu=30, W=1050, H=600, rnd=mulberry32(seed);
+  const traces=[], nodes=[], pads=[];
+  const starts=[];
+  for(let i=0;i<opts.count;i++){
+    const edge=Math.floor(rnd()*4); let x,y,dx,dy;
+    if(edge===0){ x=0; y=Math.floor(rnd()*20)*gu; dx=1; dy=0; }
+    else if(edge===1){ x=W; y=Math.floor(rnd()*20)*gu; dx=-1; dy=0; }
+    else if(edge===2){ x=Math.floor(rnd()*35)*gu; y=0; dx=0; dy=1; }
+    else { x=Math.floor(rnd()*35)*gu; y=H; dx=0; dy=-1; }
+    starts.push([x,y]);
+    let d=`M ${x} ${y}`, cx=x, cy=y;
+    const turns=3+Math.floor(rnd()*4);
+    for(let t=0;t<turns;t++){
+      const steps=1+Math.floor(rnd()*3);
+      cx+=dx*steps*gu; cy+=dy*steps*gu;
+      cx=Math.max(0,Math.min(W,cx)); cy=Math.max(0,Math.min(H,cy));
+      d+=` L ${cx} ${cy}`;
+      if(rnd()<.5){ dx=dy!==0?(rnd()<.5?1:-1):0; dy=dy!==0?0:(rnd()<.5?1:-1); }
+    }
+    const accent = rnd()<.28;
+    traces.push({d, accent});
+    nodes.push({x:cx,y:cy,accent, glow: accent && rnd()<.7});
+    if(rnd()<.6) pads.push({x:x,y:y});
+  }
+  // parallel "bus" in a lower corner for authenticity
+  const busY = 15*gu;
+  for(let i=0;i<3;i++){ traces.push({d:`M 0 ${busY+i*10} L ${5*gu} ${busY+i*10} L ${5*gu+ i*10} ${busY+i*10+ (i+1)*10}`, accent:false}); }
+
+  const t = traces.map(tr=>`<path d="${tr.d}" fill="none" stroke="${tr.accent?p.accent:p.copper}" stroke-opacity="${tr.accent?.5:.42}" stroke-width="${tr.accent?2:1.6}" stroke-linecap="round" stroke-linejoin="round"/>`).join('');
+  const nd = nodes.map(n=>{
+    const c = n.accent?p.accent:p.copper;
+    const g = n.glow?`<circle cx="${n.x}" cy="${n.y}" r="9" fill="${p.accent}" opacity="0.16" class="pulseNode"/>`:'';
+    return `${g}<circle cx="${n.x}" cy="${n.y}" r="3.4" fill="${n.accent?p.accentBright:p.copper}" opacity="${n.accent?.95:.6}"/><circle cx="${n.x}" cy="${n.y}" r="6" fill="none" stroke="${c}" stroke-width="1.2" opacity="${n.accent?.7:.4}"/>`;
+  }).join('');
+  const pd = pads.map(v=>`<rect x="${v.x-3}" y="${v.y-3}" width="6" height="6" rx="1.4" fill="none" stroke="${p.copper}" stroke-width="1.2" opacity=".5"/>`).join('');
+  return t+pd+nd;
+}
+
+// ---- QR as a diagnostic module (real matrix, restyled) ----
+function buildQR(p, x0, y0, size){
+  const N=29, quiet=4, total=N+quiet*2, u=size/total, off=quiet*u;
+  const inFinder=(r,c)=>((r<7&&c<7)||(r<7&&c>=N-7)||(r>=N-7&&c<7));
+  let mods='';
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    if(MATRIX[r][c]!=='1'||inFinder(r,c)) continue;
+    const s=u*0.96, o=(u-s)/2;
+    mods+=`<rect x="${(x0+off+c*u+o).toFixed(2)}" y="${(y0+off+r*u+o).toFixed(2)}" width="${s.toFixed(2)}" height="${s.toFixed(2)}" rx="${(s*0.26).toFixed(2)}" fill="${p.qrMod}"/>`;
+  }
+  // custom finder eyes — exact 7/5/3 module geometry (filled layers) so scanners lock on
+  function eye(gr,gc){
+    const ex=x0+off+gc*u, ey=y0+off+gr*u;
+    const rr=(x,y,n,r,fill)=>`<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${(n*u).toFixed(2)}" height="${(n*u).toFixed(2)}" rx="${(u*r).toFixed(2)}" fill="${fill}"/>`;
+    return rr(ex, ey, 7, 1.7, p.accent)                     // outer dark ring block
+         + rr(ex+u, ey+u, 5, 1.2, p.bg1)                    // light gap (card ground)
+         + rr(ex+2*u, ey+2*u, 3, 0.85, p.accentBright);     // dark center
+  }
+  const eyes=eye(0,0)+eye(0,N-7)+eye(N-7,0);
+  // center monogram (small, safe under H error-correction)
+  const cx=x0+size/2, cy=y0+size/2, r=size*0.11;
+  const mono=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${p.bg1}" stroke="${p.accent}" stroke-width="2"/>`
+    +`<path d="M ${cx-r*0.55} ${cy} L ${cx-r*0.18} ${cy} L ${cx-r*0.04} ${cy-r*0.45} L ${cx+r*0.12} ${cy+r*0.5} L ${cx+r*0.28} ${cy-r*0.28} L ${cx+r*0.4} ${cy} L ${cx+r*0.58} ${cy}" fill="none" stroke="${p.accentBright}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  return `<g>${mods}${eyes}${mono}</g>`;
+}
+
+function bracket(x,y,w,h,len,col){
+  const c=(px,py,sx,sy)=>`<path d="M ${px+sx*len} ${py} L ${px} ${py} L ${px} ${py+sy*len}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round"/>`;
+  return c(x,y,1,1)+c(x+w,y,-1,1)+c(x,y+h,1,-1)+c(x+w,y+h,-1,-1);
+}
+
+function defs(p,id){
+  return `<defs>
+    <linearGradient id="steel${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${p.steelA}"/><stop offset=".34" stop-color="${p.steelB}"/>
+      <stop offset=".52" stop-color="${p.steelC}"/><stop offset=".66" stop-color="${p.steelE}"/>
+      <stop offset="1" stop-color="${p.steelD}"/>
+    </linearGradient>
+    <linearGradient id="bg${id}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${p.bg1}"/><stop offset="1" stop-color="${p.bg2}"/>
+    </linearGradient>
+    <radialGradient id="vig${id}" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="${p.vignette}" stop-opacity="0"/>
+      <stop offset="1" stop-color="${p.vignette}" stop-opacity="0.85"/>
+    </radialGradient>
+    <radialGradient id="clear${id}" cx="50%" cy="46%" r="52%">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/>
+      <stop offset=".62" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#fff"/>
+    </radialGradient>
+    <mask id="fade${id}"><rect width="1050" height="600" fill="url(#clear${id})"/></mask>
+    <filter id="glow${id}" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>`;
+}
+
+// Refined EKG pulse polyline
+function pulsePath(x1,x2,base,dip){
+  const s=x1+(x2-x1)*0.46;
+  return `M ${x1} ${base} L ${s} ${base} `
+    + `L ${s+14} ${base-6} L ${s+30} ${base-dip*0.9} L ${s+46} ${base+dip} L ${s+60} ${base-6} `
+    + `L ${s+74} ${base} L ${x2} ${base}`;
+}
+
+function frontSVG(p){
+  const circuits = buildCircuits(1337, p, {count:20});
+  const pulse = pulsePath(360, 1050, 372, 40);
+  return defs(p,'F')
+  + `<rect width="1050" height="600" fill="url(#bgF)"/>`
+  + `<g mask="url(#fadeF)" opacity="0.9">${circuits}</g>`
+  + `<rect width="1050" height="600" fill="url(#vigF)"/>`
+  // corner registration marks
+  + `<g stroke="${p.copper}" stroke-width="1.4" opacity=".55" fill="none">
+       <path d="M 40 40 h 26 M 40 40 v 26"/><path d="M 1010 40 h -26 M 1010 40 v 26"/>
+       <path d="M 40 560 h 26 M 40 560 v -26"/><path d="M 1010 560 h -26 M 1010 560 v -26"/>
+     </g>`
+  // status chip
+  + `<g transform="translate(74,70)">
+       <circle cx="6" cy="6" r="5" fill="${p.accent}" class="pulseNode"/>
+       <text x="20" y="10" font-family="ui-monospace,Menlo,monospace" font-size="13" letter-spacing="3" fill="${p.tagline}">SYSTEM ONLINE</text>
+     </g>`
+  // wordmark
+  + `<g text-anchor="middle">
+       <text x="525" y="292" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="800" font-size="150" letter-spacing="-6" fill="url(#steelF)">WeGen</text>
+       <text x="525" y="352" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="500" font-size="46" letter-spacing="20" fill="${p.accent}">digital pulse</text>
+     </g>`
+  // hero pulse line
+  + `<path d="${pulse}" fill="none" stroke="${p.accent}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#glowF)"/>`
+  + `<path d="${pulse}" fill="none" stroke="${p.accentBright}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" class="scan"/>`
+  // tagline
+  + `<g text-anchor="middle">
+       <text x="525" y="500" font-family="ui-monospace,Menlo,monospace" font-size="21" letter-spacing="5" fill="${p.tagline}">DOES YOUR WEBSITE LEAVE YOU <tspan fill="${p.taglineHi}" font-weight="600">EXPOSED?</tspan></text>
+     </g>`;
+}
+
+function backSVG(p, person){
+  const circuits = buildCircuits(88, p, {count:11});
+  return defs(p,'B')
+  + `<rect width="1050" height="600" fill="url(#bgB)"/>`
+  + `<g mask="url(#fadeB)" opacity="0.5">${circuits}</g>`
+  + `<rect width="1050" height="600" fill="url(#vigB)"/>`
+  + `<g stroke="${p.copper}" stroke-width="1.4" opacity=".5" fill="none">
+       <path d="M 40 40 h 24 M 40 40 v 24"/><path d="M 1010 560 h -24 M 1010 560 v -24"/></g>`
+  // top brand lockup
+  + `<g>
+       <text x="74" y="96" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="800" font-size="44" letter-spacing="-2" fill="url(#steelB)">WeGen</text>
+       <text x="270" y="96" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="500" font-size="18" letter-spacing="6" fill="${p.accent}">digital pulse</text>
+       <path d="M 74 118 L 470 118 L 486 118 L 492 112 L 500 126 L 506 118 L 560 118" fill="none" stroke="${p.accent}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+     </g>`
+  // what we do
+  + `<text x="74" y="180" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="700" font-size="26" letter-spacing="0" fill="${p.steelA}">Website Security &amp; Digital Presence Audits</text>`
+  + `<text x="74" y="222" font-family="'Helvetica Neue',Arial,sans-serif" font-size="16.5" fill="${p.tagline}">We stress-test your website the way an attacker would — exposing the</text>`
+  + `<text x="74" y="248" font-family="'Helvetica Neue',Arial,sans-serif" font-size="16.5" fill="${p.tagline}">leaks, gaps, and vulnerabilities before they cost you customers or trust.</text>`
+  // divider
+  + `<line x1="74" y1="300" x2="600" y2="300" stroke="${p.copper}" stroke-opacity=".4" stroke-width="1"/>`
+  // identity block
+  + `<text x="74" y="360" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="800" font-size="40" letter-spacing="-1" fill="url(#steelB)">${person.name}</text>`
+  + `<text x="76" y="392" font-family="ui-monospace,Menlo,monospace" font-size="15" letter-spacing="2.5" fill="${p.accent}">${person.role.toUpperCase()}</text>`
+  + `<g font-family="ui-monospace,Menlo,monospace" font-size="16" fill="${p.steelC}">
+       <circle cx="80" cy="443" r="3.5" fill="${p.accent}"/><text x="98" y="448">${person.email}</text>
+       <circle cx="80" cy="478" r="3.5" fill="${p.accent}"/><text x="98" y="483">${person.phone}</text>
+       <circle cx="80" cy="513" r="3.5" fill="${p.accent}"/><text x="98" y="518" fill="${p.steelE}">wegendigital.com</text>
+     </g>`
+  // QR module (right)
+  + qrModule(p, 720, 150)
+  ;
+}
+
+function qrModule(p, qx, qy){
+  const size=250;
+  return `<g>`
+    + `<rect x="${qx-30}" y="${qy-30}" width="${size+60}" height="${size+60}" rx="20" fill="${p.bg1}" stroke="${p.copper}" stroke-opacity=".35" stroke-width="1"/>`
+    + bracket(qx-14, qy-14, size+28, size+28, 20, p.accent)
+    + buildQR(p, qx, qy, size)
+    // pulse tick + SCAN ME
+    + `<path d="M ${qx} ${qy+size+34} L ${qx+size*0.36} ${qy+size+34} L ${qx+size*0.42} ${qy+size+26} L ${qx+size*0.5} ${qy+size+44} L ${qx+size*0.58} ${qy+size+34} L ${qx+size} ${qy+size+34}" fill="none" stroke="${p.accent}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>`
+    + `<text x="${qx+size/2}" y="${qy+size+64}" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="16" letter-spacing="7" fill="${p.steelE}">SCAN ME</text>`
+    + `</g>`;
+}
+
+// ---- state + render ----
+let state = { ed:'signal', persona:0 };
+function render(){
+  const p = EDITIONS[state.ed];
+  document.documentElement.setAttribute('data-ed', state.ed);
+  document.getElementById('front').innerHTML = frontSVG(p);
+  document.getElementById('back').innerHTML  = backSVG(p, PERSONAS[state.persona]);
+}
+document.querySelectorAll('.seg [data-ed]').forEach(b=>b.addEventListener('click',()=>{
+  state.ed=b.dataset.ed;
+  document.querySelectorAll('.seg [data-ed]').forEach(x=>x.setAttribute('aria-pressed', x===b));
+  render();
+}));
+document.querySelectorAll('.seg [data-persona]').forEach(b=>b.addEventListener('click',()=>{
+  state.persona=+b.dataset.persona;
+  document.querySelectorAll('.seg [data-persona]').forEach(x=>x.setAttribute('aria-pressed', x===b));
+  render();
+}));
+render();
+</script>
+
+<style>
+  @keyframes nodePulse{ 0%,100%{ opacity:.16 } 50%{ opacity:.5 } }
+  .pulseNode{ animation:nodePulse 2.6s ease-in-out infinite; }
+  @keyframes scanSweep{ from{ stroke-dashoffset:1400 } to{ stroke-dashoffset:0 } }
+  .scan{ stroke-dasharray:60 1340; animation:scanSweep 4s linear infinite; opacity:.9; }
+  @media (prefers-reduced-motion: reduce){ .pulseNode,.scan{ animation:none } }
+</style>
