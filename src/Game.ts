@@ -56,6 +56,7 @@ import { Haptics } from './haptics/Haptics';
 import { ProgressionSystem } from './systems/ProgressionSystem';
 import { MissionsScreen } from './ui/MissionsScreen';
 import { el } from './ui/dom';
+import { SIGNAL_REMAPS } from './data/accessibility';
 import { PICKUP_COLORS, type PowerupType } from './data/powerups';
 import { ENVIRONMENTS, ENVIRONMENT_ORDER } from './data/environments';
 import { PlayerRig } from './render/PlayerRig';
@@ -170,6 +171,9 @@ export class Game {
 
   /** Adaptive quality level (0 = full), stepped by the perf governor (§18). */
   qualityLevel = 0;
+  private qFrameAccumS = 0;
+  private qFrames = 0;
+  private qCalmWindows = 0;
 
   private fpsFrames = 0;
   private fpsAccumS = 0;
@@ -479,6 +483,9 @@ export class Game {
       this.cameraSystem.reducedMotion = this.settings.get('reducedMotion');
       this.particles.reducedMotion = this.settings.get('reducedMotion');
       this.audio.applyVolumes();
+      // Colorblind mode remaps the 3D signal colors live — the scene behind
+      // the settings panel IS the preview (spec §16).
+      this.materials.retintSignals(SIGNAL_REMAPS[this.settings.get('colorblind')]);
     };
     apply();
     this.bus.on('settings.changed', ({ key, value }) => {
@@ -554,6 +561,7 @@ export class Game {
     }
 
     this.sampleFps(dt);
+    this.updateQualityGovernor(dt);
     this.debugOverlay.update(dt, {
       drawCalls: this.renderer.drawCalls,
       triangles: this.renderer.triangles,
@@ -777,6 +785,45 @@ export class Game {
     if (this.fsm.transition(GameState.GameOver)) {
       this.screens.show('gameover', result);
     }
+  }
+
+  /**
+   * Adaptive quality (spec §18): if the average frame time over
+   * ~sampleFrames exceeds the budget, step down pixel ratio → particle
+   * caps → draw distance. Calm sustained windows step back up (hysteresis).
+   */
+  private updateQualityGovernor(dt: number): void {
+    const cfg = Config.render.adaptive;
+    this.qFrames++;
+    this.qFrameAccumS += dt;
+    if (this.qFrames < cfg.sampleFrames) return;
+    const avgMs = (this.qFrameAccumS / this.qFrames) * 1000;
+    this.qFrames = 0;
+    this.qFrameAccumS = 0;
+
+    const maxLevel = cfg.pixelRatioSteps.length - 1;
+    if (avgMs > cfg.frameBudgetMs && this.qualityLevel < maxLevel) {
+      this.qCalmWindows = 0;
+      this.applyQualityLevel(this.qualityLevel + 1);
+    } else if (avgMs < cfg.frameBudgetMs * 0.65 && this.qualityLevel > 0) {
+      // Only step back up after several consecutive calm windows.
+      this.qCalmWindows++;
+      if (this.qCalmWindows >= 4) {
+        this.qCalmWindows = 0;
+        this.applyQualityLevel(this.qualityLevel - 1);
+      }
+    } else {
+      this.qCalmWindows = 0;
+    }
+  }
+
+  private applyQualityLevel(level: number): void {
+    const cfg = Config.render.adaptive;
+    this.qualityLevel = level;
+    this.renderer.setPixelRatioScale(cfg.pixelRatioSteps[level]);
+    this.particles.qualityScale = cfg.particleScaleSteps[level];
+    this.environment.setFogScale(cfg.fogPullSteps[level]);
+    this.bus.emit('quality.changed', { level });
   }
 
   private sampleFps(dt: number): void {

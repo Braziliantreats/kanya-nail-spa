@@ -70,10 +70,23 @@ export class ToonMaterialFactory {
         mat.opacity = opts.opacity ?? 1;
       }
       this.basicCache.set(key, mat);
+      this.basicOriginals.set(mat, color);
     }
     return mat;
   }
   private basicCache = new Map<string, THREE.MeshBasicMaterial>();
+  /** Shared basic material → its ORIGINAL color, for colorblind retints. */
+  private basicOriginals = new Map<THREE.MeshBasicMaterial, number>();
+
+  /**
+   * Colorblind support (spec §16): remap shared signal colors in place.
+   * Passing an empty map restores every material to its original color.
+   */
+  retintSignals(remap: Record<number, number>): void {
+    for (const [mat, original] of this.basicOriginals) {
+      mat.color.setHex(remap[original] ?? original);
+    }
+  }
 
   /** Dispose every cached material + the gradient map (spec §18 teardown). */
   disposeAll(): void {

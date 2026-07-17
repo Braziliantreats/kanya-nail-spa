@@ -62,6 +62,8 @@ export class EnvironmentSystem {
 
   private geometries: THREE.BufferGeometry[] = [];
   private currentThemeId = 'subway';
+  /** Adaptive quality: scales fog far (draw distance) — spec §18. */
+  private fogScale = 1;
 
   constructor(
     private scene: THREE.Scene,
@@ -299,9 +301,9 @@ export class EnvironmentSystem {
     if (this.scene.fog instanceof THREE.Fog) {
       this.scene.fog.color.setHex(theme.fogColor);
       this.scene.fog.near = theme.fogNear;
-      this.scene.fog.far = theme.fogFar;
+      this.scene.fog.far = theme.fogFar * this.fogScale;
     } else {
-      this.scene.fog = new THREE.Fog(theme.fogColor, theme.fogNear, theme.fogFar);
+      this.scene.fog = new THREE.Fog(theme.fogColor, theme.fogNear, theme.fogFar * this.fogScale);
     }
     this.roadMatA.color.setHex(theme.ground);
     this.roadMatB.color.setHex(theme.groundAlt);
@@ -329,7 +331,7 @@ export class EnvironmentSystem {
     if (this.scene.fog instanceof THREE.Fog) {
       this.lerpHex(a.fogColor, b.fogColor, t, this.scene.fog.color);
       this.scene.fog.near = a.fogNear + (b.fogNear - a.fogNear) * t;
-      this.scene.fog.far = a.fogFar + (b.fogFar - a.fogFar) * t;
+      this.scene.fog.far = (a.fogFar + (b.fogFar - a.fogFar) * t) * this.fogScale;
     }
     this.lerpHex(a.ground, b.ground, t, this.roadMatA.color);
     this.lerpHex(a.groundAlt, b.groundAlt, t, this.roadMatB.color);
@@ -349,6 +351,14 @@ export class EnvironmentSystem {
   setThemeById(id: string): void {
     const theme = ENVIRONMENTS[id];
     if (theme) this.applyTheme(theme);
+  }
+
+  /** Adaptive-quality hook: pulls fog (and with it, effective draw distance). */
+  setFogScale(scale: number): void {
+    this.fogScale = scale;
+    if (this.scene.fog instanceof THREE.Fog && !this.toTheme) {
+      this.scene.fog.far = this.theme.fogFar * scale;
+    }
   }
 
   /** Scrolls the world toward the camera; recycles slabs behind it. */
