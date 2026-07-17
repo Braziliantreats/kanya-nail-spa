@@ -158,6 +158,12 @@ export const Config = {
   render: {
     pixelRatioCap: 2,
     toonSteps: 4, // gradient-map bands for MeshToonMaterial
+    /** Neon glow pass — disabled automatically at quality L1+ (spec §18). */
+    bloom: {
+      strength: 0.75,
+      radius: 0.55,
+      threshold: 0.5,
+    },
     adaptive: {
       /** If avg frame time exceeds this over sampleFrames, step quality down. */
       frameBudgetMs: 20,

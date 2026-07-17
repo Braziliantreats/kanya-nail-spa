@@ -60,6 +60,15 @@ export class EnvironmentSystem {
   private dirLight!: THREE.DirectionalLight;
   private bgColor = new THREE.Color();
 
+  /** Gradient sky dome — uniforms lerp during gateway transitions. */
+  private skyUniforms = {
+    topColor: { value: new THREE.Color(0x171240) },
+    bottomColor: { value: new THREE.Color(0x5a37a8) },
+    offsetY: { value: 8 },
+    exponent: { value: 0.65 },
+  };
+  private skyMat: THREE.ShaderMaterial | null = null;
+
   private geometries: THREE.BufferGeometry[] = [];
   private currentThemeId = 'subway';
   /** Adaptive quality: scales fog far (draw distance) — spec §18. */
@@ -79,16 +88,50 @@ export class EnvironmentSystem {
     this.currentThemeId = theme.id;
 
     // --- Lighting: 1 directional + 1 hemisphere, no realtime shadows (§9) ---
-    this.hemiLight = new THREE.HemisphereLight(0x8fb4ff, theme.shoulder, 0.9);
-    this.dirLight = new THREE.DirectionalLight(0xfff2e0, 1.35);
+    this.hemiLight = new THREE.HemisphereLight(0xa8c4ff, theme.shoulder, 1.25);
+    this.dirLight = new THREE.DirectionalLight(0xfff2e0, 1.7);
     this.dirLight.position.set(4, 9, 3);
     this.dirLight.target.position.set(0, 0, -8);
     this.scene.add(this.hemiLight, this.dirLight, this.dirLight.target);
 
+    this.buildSky();
     this.buildTrack(theme);
     this.buildArch();
     this.buildPropSets();
     this.applyTheme(theme);
+  }
+
+  /** Gradient sky dome (zenith → glowing horizon) — one draw call. */
+  private buildSky(): void {
+    const geo = new THREE.SphereGeometry(130, 24, 14);
+    this.geometries.push(geo);
+    this.skyMat = new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false,
+      uniforms: this.skyUniforms,
+      vertexShader: /* glsl */ `
+        varying vec3 vWorldPosition;
+        void main() {
+          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPosition.xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform vec3 topColor;
+        uniform vec3 bottomColor;
+        uniform float offsetY;
+        uniform float exponent;
+        varying vec3 vWorldPosition;
+        void main() {
+          float h = normalize(vWorldPosition + vec3(0.0, offsetY, 0.0)).y;
+          float t = pow(max(h, 0.0), exponent);
+          gl_FragColor = vec4(mix(bottomColor, topColor, t), 1.0);
+        }`,
+    });
+    const dome = new THREE.Mesh(geo, this.skyMat);
+    dome.renderOrder = -1;
+    this.scene.add(dome);
   }
 
   /** Gateway arch — glowing frame the player passes through at theme swaps. */
@@ -297,7 +340,9 @@ export class EnvironmentSystem {
     this.toTheme = null;
     this.blendT = 1;
     this.bgColor.setHex(theme.sky);
-    this.scene.background = this.bgColor;
+    this.scene.background = this.skyMat ? null : this.bgColor; // dome covers the bg
+    this.skyUniforms.topColor.value.setHex(theme.skyTop);
+    this.skyUniforms.bottomColor.value.setHex(theme.skyBottom);
     if (this.scene.fog instanceof THREE.Fog) {
       this.scene.fog.color.setHex(theme.fogColor);
       this.scene.fog.near = theme.fogNear;
@@ -328,6 +373,8 @@ export class EnvironmentSystem {
     const b = this.toTheme;
     const t = this.blendT;
     this.lerpHex(a.sky, b.sky, t, this.bgColor);
+    this.lerpHex(a.skyTop, b.skyTop, t, this.skyUniforms.topColor.value);
+    this.lerpHex(a.skyBottom, b.skyBottom, t, this.skyUniforms.bottomColor.value);
     if (this.scene.fog instanceof THREE.Fog) {
       this.lerpHex(a.fogColor, b.fogColor, t, this.scene.fog.color);
       this.scene.fog.near = a.fogNear + (b.fogNear - a.fogNear) * t;
@@ -412,6 +459,7 @@ export class EnvironmentSystem {
       set.mesh.dispose();
     }
     this.propSets.clear();
+    this.skyMat?.dispose();
     this.roadMatA.dispose();
     this.roadMatB.dispose();
     this.shoulderMat.dispose();

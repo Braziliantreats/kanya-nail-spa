@@ -11,6 +11,7 @@
  */
 
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Config } from '../core/Config';
 import type { ObstacleType } from '../data/patterns';
@@ -92,7 +93,7 @@ export class TrackObjectFactory {
           }),
           darkMat,
         );
-        const beam = new THREE.Mesh(this.geo('low-beam', () => new THREE.BoxGeometry(1.9, 1.35, 0.36)), bodyMat);
+        const beam = new THREE.Mesh(this.geo('low-beam', () => new RoundedBoxGeometry(1.9, 1.35, 0.36, 2, 0.09)), bodyMat);
         beam.position.y = 1.925;
         const strip = new THREE.Mesh(
           this.geo('low-strip', () => new THREE.BoxGeometry(1.9, 0.07, 0.4)),
@@ -123,7 +124,7 @@ export class TrackObjectFactory {
           }),
           darkMat,
         );
-        const sign = new THREE.Mesh(this.geo('oh-sign', () => new THREE.BoxGeometry(1.7, 2.0, 0.4)), bodyMat);
+        const sign = new THREE.Mesh(this.geo('oh-sign', () => new RoundedBoxGeometry(1.7, 2.0, 0.4, 2, 0.11)), bodyMat);
         sign.position.y = 2.3;
         const strip = new THREE.Mesh(
           this.geo('oh-strip', () => new THREE.BoxGeometry(1.7, 0.07, 0.44)),
@@ -138,7 +139,7 @@ export class TrackObjectFactory {
       case 'hurdle': {
         // Knee/waist block — jump (cyan ∧).
         const glow = this.materials.basic(SIGNAL_COLORS.jump);
-        const block = new THREE.Mesh(this.geo('hurdle-block', () => new THREE.BoxGeometry(1.8, 0.72, 0.5)), bodyMat);
+        const block = new THREE.Mesh(this.geo('hurdle-block', () => new RoundedBoxGeometry(1.8, 0.72, 0.5, 2, 0.1)), bodyMat);
         block.position.y = 0.36;
         const top = new THREE.Mesh(
           this.geo('hurdle-top', () => new THREE.BoxGeometry(1.8, 0.07, 0.54)),
@@ -153,7 +154,7 @@ export class TrackObjectFactory {
       case 'full': {
         // Impassable panel — lane change only (magenta ✕).
         const glow = this.materials.basic(SIGNAL_COLORS.lane);
-        const panel = new THREE.Mesh(this.geo('full-panel', () => new THREE.BoxGeometry(1.85, 3.4, 0.6)), bodyMat);
+        const panel = new THREE.Mesh(this.geo('full-panel', () => new RoundedBoxGeometry(1.85, 3.4, 0.6, 2, 0.14)), bodyMat);
         panel.position.y = 1.7;
         const frame = new THREE.Mesh(
           this.geo('full-frame', () => {
@@ -176,9 +177,9 @@ export class TrackObjectFactory {
       case 'mover': {
         // Brand-neutral maintenance hover-drone crossing lanes (magenta).
         const glow = this.materials.basic(SIGNAL_COLORS.lane);
-        const body = new THREE.Mesh(this.geo('mover-body', () => new THREE.BoxGeometry(1.5, 0.7, 0.95)), bodyMat);
+        const body = new THREE.Mesh(this.geo('mover-body', () => new RoundedBoxGeometry(1.5, 0.7, 0.95, 2, 0.16)), bodyMat);
         body.position.y = 0.75;
-        const canopy = new THREE.Mesh(this.geo('mover-canopy', () => new THREE.BoxGeometry(1.1, 0.34, 0.7)), darkMat);
+        const canopy = new THREE.Mesh(this.geo('mover-canopy', () => new RoundedBoxGeometry(1.1, 0.34, 0.7, 2, 0.1)), darkMat);
         canopy.position.y = 1.27;
         const skirt = new THREE.Mesh(
           this.geo('mover-skirt', () => new THREE.BoxGeometry(1.6, 0.14, 1.05)),
@@ -256,7 +257,8 @@ export class CrystalField {
 
   constructor(scene: THREE.Scene, materials: ToonMaterialFactory) {
     const geo = new THREE.OctahedronGeometry(0.26, 0);
-    const mat = materials.get(0x9fe8ff, { emissive: 0x38b8e8, emissiveIntensity: 0.65 });
+    // Hot emissive so the bloom pass makes the gems genuinely glow.
+    const mat = materials.get(0x9fe8ff, { emissive: 0x55d4ff, emissiveIntensity: 1.4 });
     this.mesh = new THREE.InstancedMesh(geo, mat, CrystalField.CAPACITY);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.frustumCulled = false; // instances span the whole track

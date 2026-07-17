@@ -820,6 +820,8 @@ export class Game {
   private applyQualityLevel(level: number): void {
     const cfg = Config.render.adaptive;
     this.qualityLevel = level;
+    // Bloom is the most expensive luxury — first thing dropped under load.
+    this.renderer.setBloomEnabled(level === 0);
     this.renderer.setPixelRatioScale(cfg.pixelRatioSteps[level]);
     this.particles.qualityScale = cfg.particleScaleSteps[level];
     this.environment.setFogScale(cfg.fogPullSteps[level]);

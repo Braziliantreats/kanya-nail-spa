@@ -8,6 +8,7 @@
  */
 
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Config } from '../core/Config';
 import { damp, lerp } from '../core/easing';
 import type { EventBus } from '../core/Events';
@@ -72,10 +73,12 @@ export class PlayerRig {
   }
 
   private box(w: number, h: number, d: number, color: number, emissive?: number): THREE.Mesh {
-    const geo = new THREE.BoxGeometry(w, h, d);
+    // Rounded corners soften the silhouette into the toy-like toon look (§9).
+    const radius = Math.min(w, h, d) * 0.28;
+    const geo = new RoundedBoxGeometry(w, h, d, 2, radius);
     this.geometries.push(geo);
     const mat = emissive
-      ? this.materials.get(color, { emissive, emissiveIntensity: 0.9 })
+      ? this.materials.get(color, { emissive, emissiveIntensity: 1.8 })
       : this.materials.get(color);
     return new THREE.Mesh(geo, mat);
   }
