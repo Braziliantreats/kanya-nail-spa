@@ -817,6 +817,42 @@ body.high-contrast .hud-crystals {
   text-shadow: 0 0 2px #000, 0 2px 12px #000;
 }
 
+/* ---------- Zen Mode FX (spec §7 — COMPLIANCE: abstract/fantastical only,
+   a soft bloom + hue shift; never reads as consumption) ---------- */
+
+.zen-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 11;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 500ms ease;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(201, 166, 255, 0.18), transparent 62%),
+    radial-gradient(circle at 50% 100%, rgba(41, 230, 255, 0.1), transparent 55%);
+  mix-blend-mode: screen;
+}
+
+.zen-fx.active {
+  opacity: 1;
+  animation: zen-breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes zen-breathe {
+  50% {
+    opacity: 0.65;
+  }
+}
+
+#game-container.zen-filter canvas {
+  filter: saturate(1.28) hue-rotate(6deg) brightness(1.05);
+  transition: filter 450ms ease;
+}
+
+body.reduced-motion .zen-fx.active {
+  animation: none; /* static soft vignette only */
+}
+
 /* ---------- Boot error ---------- */
 
 .fatal-error {

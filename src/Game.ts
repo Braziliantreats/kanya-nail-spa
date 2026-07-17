@@ -49,6 +49,10 @@ import { PauseScreen } from './ui/PauseScreen';
 import { GameOverScreen } from './ui/GameOverScreen';
 import { UiReviveProvider } from './ui/ReviveOverlay';
 import { HUD } from './ui/HUD';
+import { ParticleSystem } from './render/ParticleSystem';
+import { ZenFx } from './ui/ZenFx';
+import { PICKUP_COLORS, type PowerupType } from './data/powerups';
+import { ENVIRONMENTS, ENVIRONMENT_ORDER } from './data/environments';
 import { PlayerRig } from './render/PlayerRig';
 import type { RunSummary } from './integrations/RewardsBridge';
 
@@ -131,6 +135,14 @@ export class Game {
   private reviveGraceS = 0;
   selectedCharacter = 'sprocket';
   selectedEnvironment = 'subway';
+
+  particles!: ParticleSystem;
+  private zenFx!: ZenFx;
+  /** Near-miss hit-stop (spec §5: 60–100ms celebratory freeze). */
+  private hitStopS = 0;
+  /** Next auto environment gateway distance (spec §9: every 1,000m). */
+  private nextGatewayM = 0;
+  private gatewayIdx = 0;
 
   readonly run: RunState = {
     runId: '',
@@ -230,18 +242,66 @@ export class Game {
       this.reviveGraceS > 0 || this.powerups.absorbCrash(cause);
     this.score.multiplierProvider = () => this.powerups.scoreMult;
 
+    this.particles = new ParticleSystem(this.scene);
+    this.zenFx = new ZenFx(this.uiRoot, this.container);
+    this.environment.onThemeChanged = (theme) => this.particles.setAmbient(theme.ambientParticles);
+    this.particles.setAmbient(this.environment.theme.ambientParticles);
+
     this.bus.on('player.crashed', ({ cause, distance }) => this.onCrash(cause, distance));
     this.bus.on('powerup.activated', ({ type, durationS }) => {
       this.run.powerupsUsed[type] = (this.run.powerupsUsed[type] ?? 0) + 1;
       this.telemetry.track('powerup_used', { type, durationS });
-      if (type === 'dash') this.cameraSystem.dashKick();
+      if (type === 'dash') {
+        this.cameraSystem.dashKick();
+        this.particles.setDash(true);
+      }
       if (type === 'glider') this.playerRig.setGlider(true);
+      if (type === 'zen') this.zenFx.setActive(true);
+      this.particles.burst(this.movement.visualX, 1.2, 0, {
+        count: 16,
+        color: PICKUP_COLORS[type as PowerupType] ?? 0xffffff,
+        speed: 3.6,
+        ttl: 0.6,
+      });
     });
     this.bus.on('powerup.extended', ({ type }) => {
       if (type === 'dash') this.cameraSystem.dashKick();
     });
-    this.bus.on('powerup.expired', ({ type }) => {
+    const powerupOff = (type: string): void => {
       if (type === 'glider') this.playerRig.setGlider(false);
+      if (type === 'zen') this.zenFx.setActive(false);
+      if (type === 'dash') this.particles.setDash(false);
+    };
+    this.bus.on('powerup.expired', ({ type }) => powerupOff(type));
+    this.bus.on('powerup.replaced', ({ from }) => powerupOff(from));
+
+    // Juice event wiring (spec §5/§7 feedback).
+    this.bus.on('crystal.collected', ({ x, y, z }) => {
+      this.particles.burst(x, y, z, { count: 7, color: 0x9fe8ff, speed: 2.6, ttl: 0.45, size: 0.8 });
+    });
+    this.bus.on('nearmiss', ({ x, y, z }) => {
+      this.particles.burst(x, Math.min(y, 2.2), z, { count: 12, color: 0xffd166, speed: 3, ttl: 0.55 });
+      this.hitStopS = Config.nearMiss.hitStopMs / 1000; // celebratory freeze-frame
+    });
+    this.bus.on('player.landed', () => {
+      this.particles.burst(this.movement.visualX, 0.1, 0, {
+        count: 5,
+        color: 0x8f86c9,
+        speed: 1.6,
+        ttl: 0.35,
+        upBias: 0.3,
+        size: 0.7,
+      });
+    });
+    this.bus.on('player.lane.changed', () => {
+      // Sprocket's lane-change sparks (spec §10).
+      this.particles.burst(this.movement.visualX, 0.35, 0.2, {
+        count: 4,
+        color: 0x29e6ff,
+        speed: 2,
+        ttl: 0.3,
+        size: 0.6,
+      });
     });
 
     this.input = new InputSystem(this.container);
@@ -361,6 +421,7 @@ export class Game {
       document.body.classList.toggle('high-contrast', this.settings.get('highContrast'));
       document.body.classList.toggle('reduced-motion', this.settings.get('reducedMotion'));
       this.cameraSystem.reducedMotion = this.settings.get('reducedMotion');
+      this.particles.reducedMotion = this.settings.get('reducedMotion');
     };
     apply();
     this.bus.on('settings.changed', ({ key, value }) => {
@@ -432,6 +493,7 @@ export class Game {
       this.environment.update(dt, Config.run.menuAmbientSpeed);
       this.playerRig.idle(dt);
       this.cameraSystem.update(dt, this.movement, 0);
+      this.particles.update(dt, Config.run.menuAmbientSpeed * dt, this.renderer.camera.quaternion);
     }
 
     this.sampleFps(dt);
@@ -449,6 +511,13 @@ export class Game {
 
   private updateRun(dt: number): void {
     const run = this.run;
+
+    // Hit-stop: the whole sim freezes for a beat (spec §5). Render continues.
+    if (this.hitStopS > 0) {
+      this.hitStopS -= dt;
+      return;
+    }
+
     run.elapsedS += dt;
     // Delta-time speed ramp toward the cap (spec §5).
     run.speed = Math.min(Config.run.maxSpeed, run.speed + Config.run.ramp * dt);
@@ -458,6 +527,13 @@ export class Game {
     run.tier = this.currentTier();
 
     if (this.reviveGraceS > 0) this.reviveGraceS -= dt;
+
+    // Auto environment rotation every 1,000m via gateway arch (spec §9).
+    if (run.distance >= this.nextGatewayM - 72) {
+      this.gatewayIdx = (this.gatewayIdx + 1) % ENVIRONMENT_ORDER.length;
+      this.environment.scheduleGateway(ENVIRONMENT_ORDER[this.gatewayIdx]);
+      this.nextGatewayM += Config.environment.switchEveryM;
+    }
 
     this.input.update(dt);
     this.movement.update(dt, this.input);
@@ -471,6 +547,12 @@ export class Game {
     this.pointsEmitter.update(dt);
     this.powerupHUD.update(dt, this.powerups.hudState());
     this.hud.update(dt, run);
+
+    if (this.powerups.isActive('zen')) {
+      this.particles.zenTrail(this.movement.visualX, this.movement.y, 0, dt);
+    }
+    this.particles.update(dt, effSpeed * dt, this.renderer.camera.quaternion);
+
     // Collision last: verdicts use this frame's final positions.
     this.collision.update(this.movement, this.spawn, run.distance);
   }
@@ -508,6 +590,18 @@ export class Game {
       this.playerRig.flickerRemainS = 0;
       this.tutorial.reset();
       this.reviveGraceS = 0;
+      this.hitStopS = 0;
+      this.zenFx.setActive(false);
+      this.particles.setDash(false);
+      this.particles.releaseAll();
+      // Runs start in the selected environment; rotation resumes from there.
+      this.environment.applyTheme(ENVIRONMENTS[this.selectedEnvironment]);
+      this.particles.setAmbient(ENVIRONMENTS[this.selectedEnvironment].ambientParticles);
+      this.gatewayIdx = ENVIRONMENT_ORDER.indexOf(
+        this.selectedEnvironment as (typeof ENVIRONMENT_ORDER)[number],
+      );
+      if (this.gatewayIdx < 0) this.gatewayIdx = 0;
+      this.nextGatewayM = Config.environment.switchEveryM;
       // Tutorial runs get extra obstacle-free runway (tier-0 first ~10s, §5).
       this.spawn.reset(tutorial ? 25 : 0);
       this.input.clear();
@@ -616,6 +710,7 @@ export class Game {
     this.input.dispose();
     this.playerRig.dispose();
     this.powerups.dispose();
+    this.particles.dispose();
     this.spawn.dispose();
     this.environment.dispose();
     this.materials.disposeAll();
