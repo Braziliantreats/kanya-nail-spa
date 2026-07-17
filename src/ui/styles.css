@@ -272,26 +272,549 @@ body {
   }
 }
 
-/* ---------- TEMP dev hint (removed when the real menu lands) ---------- */
+/* ---------- Screens (spec §14: 250ms slide/fade transitions) ---------- */
 
-.temp-hint {
+.screen {
   position: fixed;
-  left: 50%;
-  bottom: calc(56px + var(--safe-bottom));
-  transform: translateX(-50%);
-  z-index: 15;
-  pointer-events: none;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 13px;
-  color: var(--c-text);
-  background: rgba(30, 22, 66, 0.75);
-  border: 1px solid rgba(41, 230, 255, 0.3);
-  white-space: nowrap;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px 20px calc(64px + var(--safe-bottom));
+  pointer-events: auto;
+  overflow-y: auto;
 }
 
-.temp-hint.hidden {
+.screen-enter {
+  animation: screen-in 250ms ease both;
+}
+
+.screen-leave {
+  animation: screen-out 220ms ease both;
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes screen-out {
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.panel {
+  width: min(94vw, 400px);
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+  background: var(--c-panel);
+  border: 1px solid rgba(41, 230, 255, 0.22);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+.panel-title {
+  margin: 0 0 4px;
+  font-size: 24px;
+  text-align: center;
+}
+
+/* Pause dims but keeps the frozen scene visible behind it. */
+.screen-pause,
+.screen-gameover {
+  background: rgba(10, 6, 26, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+/* ---------- Main menu ---------- */
+
+.screen-menu {
+  justify-content: flex-start;
+  padding-top: calc(48px + var(--safe-top));
+  background: linear-gradient(rgba(10, 6, 26, 0.5), transparent 40%);
+  pointer-events: none; /* let the idle scene show; controls re-enable below */
+}
+
+.screen-menu > * {
+  pointer-events: auto;
+}
+
+.menu-title {
+  margin: 0;
+  font-size: clamp(34px, 9vw, 52px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  background: linear-gradient(120deg, var(--c-accent), #7d5cff 55%, var(--c-accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-align: center;
+}
+
+.menu-tag {
+  color: var(--c-text-dim);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.menu-stats {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.menu-stat {
+  min-width: 86px;
+  padding: 10px 12px;
+  text-align: center;
+  background: rgba(30, 22, 66, 0.8);
+  border: 1px solid rgba(41, 230, 255, 0.18);
+  border-radius: 12px;
+}
+
+.menu-stat-value {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.menu-stat-label {
+  font-size: 11px;
+  color: var(--c-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.menu-spacer {
+  flex: 1;
+  min-height: 60px;
+  pointer-events: none !important;
+}
+
+.btn-play {
+  font-size: 22px;
+  padding: 16px 58px;
+  box-shadow: 0 8px 30px rgba(41, 230, 255, 0.35);
+}
+
+.menu-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* ---------- Settings ---------- */
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 44px;
+}
+
+.settings-label {
+  color: var(--c-text);
+  font-size: 15px;
+}
+
+.settings-row input[type='range'] {
+  width: 46%;
+  accent-color: var(--c-accent);
+  min-height: 44px;
+}
+
+.settings-row select {
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--c-panel-solid);
+  color: var(--c-text);
+  border: 1px solid rgba(185, 174, 224, 0.4);
+  font-size: 14px;
+}
+
+.settings-danger {
+  border-top: 1px solid rgba(255, 63, 92, 0.35);
+  padding-top: 12px;
+}
+
+.btn-small {
+  min-height: 44px;
+  padding: 6px 16px;
+  font-size: 14px;
+}
+
+/* Toggle switch */
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+
+.switch-track {
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(185, 174, 224, 0.3);
+  transition: background 150ms ease;
+  position: relative;
+  pointer-events: none;
+}
+
+.switch-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--c-text);
+  transition: transform 150ms ease;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--c-accent);
+}
+
+.switch input:checked + .switch-track::after {
+  transform: translateX(22px);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 3px solid var(--c-warn);
+  outline-offset: 2px;
+}
+
+/* ---------- Select cards ---------- */
+
+.select-panel {
+  width: min(94vw, 460px);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.select-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: rgba(20, 13, 46, 0.85);
+  color: var(--c-text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  min-height: 44px;
+}
+
+.select-card:hover {
+  border-color: rgba(41, 230, 255, 0.4);
+}
+
+.select-card.selected {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 18px rgba(41, 230, 255, 0.25);
+}
+
+.select-card.locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.card-swatch {
+  height: 56px;
+  border-radius: 8px;
+}
+
+.card-name {
+  font-weight: 800;
+}
+
+.card-blurb {
+  font-size: 12px;
+  color: var(--c-text-dim);
+  min-height: 1em;
+}
+
+.card-status {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-warn);
+}
+
+.select-card.selected .card-status {
+  color: var(--c-accent);
+}
+
+/* ---------- Game over ---------- */
+
+.best-badge {
+  align-self: center;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, var(--c-warn), var(--c-accent-2));
+  color: var(--c-bg);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  animation: pu-pulse 1s ease-in-out infinite;
+}
+
+.best-badge.hidden {
   display: none;
+}
+
+.run-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+
+.run-stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(185, 174, 224, 0.15);
+}
+
+.run-stat-label {
+  color: var(--c-text-dim);
+}
+
+.run-stat-value {
+  font-weight: 800;
+}
+
+/* ---------- Revive (spec §15) ---------- */
+
+.revive-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  background: rgba(10, 6, 26, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.revive-panel {
+  text-align: center;
+}
+
+.revive-sub {
+  margin: 0;
+  color: var(--c-text-dim);
+}
+
+.revive-btn {
+  font-size: 19px;
+}
+
+/* ---------- HUD (spec §14) ---------- */
+
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.hud-pause {
+  position: absolute;
+  top: calc(10px + var(--safe-top));
+  left: calc(10px + var(--safe-left));
+  width: 46px;
+  height: 46px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(30, 22, 66, 0.8);
+  color: var(--c-text);
+  font-size: 14px;
+  letter-spacing: -1px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.hud-center {
+  position: absolute;
+  top: calc(10px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.hud-distance {
+  font-size: 30px;
+  font-weight: 900;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+}
+
+.hud-score {
+  font-size: 15px;
+  color: var(--c-text-dim);
+  font-weight: 700;
+}
+
+.hud-crystals {
+  position: absolute;
+  top: calc(16px + var(--safe-top));
+  right: calc(12px + var(--safe-right));
+  font-size: 17px;
+  font-weight: 800;
+  color: #9fe8ff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.hud-progress {
+  position: absolute;
+  top: calc(62px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(46vw, 220px);
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.hud-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--c-accent), #7d5cff);
+}
+
+.hud-popup {
+  position: absolute;
+  top: 34%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+
+.hud-popup.show {
+  animation: popup-rise 950ms ease-out forwards;
+}
+
+.hud-popup.nearmiss {
+  color: var(--c-warn);
+}
+
+.hud-popup.powerup {
+  color: var(--c-accent);
+}
+
+.hud-popup.streak {
+  color: #7bffce;
+}
+
+@keyframes popup-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 14px) scale(0.8);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.06);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -34px) scale(1);
+  }
+}
+
+.hud-tutorial {
+  position: absolute;
+  bottom: calc(24% + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: rgba(30, 22, 66, 0.92);
+  border: 1px solid var(--c-accent);
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  animation: tutorial-bob 1s ease-in-out infinite;
+}
+
+.hud-tutorial.hidden {
+  display: none;
+}
+
+@keyframes tutorial-bob {
+  50% {
+    transform: translateX(-50%) translateY(-6px);
+  }
+}
+
+/* Reduced motion: calm the DOM layer too (spec §16). */
+body.reduced-motion .hud-tutorial {
+  animation: none;
+}
+
+body.reduced-motion .screen-enter,
+body.reduced-motion .screen-leave {
+  animation-duration: 1ms;
+}
+
+body.reduced-motion .best-badge,
+body.reduced-motion .pu-chip.deployable.ready {
+  animation: none;
+}
+
+/* High contrast (spec §16). */
+body.high-contrast {
+  --c-text-dim: #d8cef5;
+  --c-panel: rgba(16, 10, 40, 0.98);
+}
+
+body.high-contrast .hud-distance,
+body.high-contrast .hud-crystals {
+  text-shadow: 0 0 2px #000, 0 2px 12px #000;
 }
 
 /* ---------- Boot error ---------- */

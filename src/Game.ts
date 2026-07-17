@@ -28,7 +28,7 @@ import {
 } from './integrations/RewardsBridge';
 import { ConsoleTelemetry, NoopTelemetry, type Telemetry } from './integrations/Telemetry';
 import { DefaultAgeGate, type AgeGate } from './integrations/AgeGate';
-import { AutoReviveProvider, type ReviveProvider } from './integrations/ReviveProvider';
+import type { ReviveProvider } from './integrations/ReviveProvider';
 import { DebugOverlay } from './ui/DebugOverlay';
 import { LegalFooter } from './ui/LegalFooter';
 import { InputSystem } from './systems/InputSystem';
@@ -38,7 +38,17 @@ import { SpawnSystem } from './systems/SpawnSystem';
 import { CollisionSystem } from './systems/CollisionSystem';
 import { ScoreSystem } from './systems/ScoreSystem';
 import { PowerupSystem } from './systems/PowerupSystem';
+import { TutorialSystem } from './systems/TutorialSystem';
 import { PowerupHUD } from './ui/PowerupHUD';
+import { SettingsStore } from './core/Settings';
+import { ScreenManager } from './ui/ScreenManager';
+import { MenuScreen } from './ui/MenuScreen';
+import { SettingsScreen } from './ui/SettingsScreen';
+import { CharacterScreen, EnvironmentScreen } from './ui/SelectScreens';
+import { PauseScreen } from './ui/PauseScreen';
+import { GameOverScreen } from './ui/GameOverScreen';
+import { UiReviveProvider } from './ui/ReviveOverlay';
+import { HUD } from './ui/HUD';
 import { PlayerRig } from './render/PlayerRig';
 import type { RunSummary } from './integrations/RewardsBridge';
 
@@ -86,8 +96,10 @@ export class Game {
 
   readonly rewardsBridge: RewardsBridge;
   readonly telemetry: Telemetry;
-  readonly reviveProvider: ReviveProvider;
+  reviveProvider!: ReviveProvider;
+  private injectedReviveProvider: ReviveProvider | null;
   readonly storage: GameStorage;
+  settings!: SettingsStore;
   private ageGate: AgeGate;
 
   readonly scene = new THREE.Scene();
@@ -110,9 +122,15 @@ export class Game {
   score!: ScoreSystem;
   powerups!: PowerupSystem;
   private powerupHUD!: PowerupHUD;
-  private tempStartHint: HTMLElement | null = null;
+  tutorial!: TutorialSystem;
+  screens!: ScreenManager;
+  hud!: HUD;
+  private menuScreen!: MenuScreen;
   private sessionTimeS = 0;
-  private crashAtS = -99;
+  /** Post-revive invincibility window (spec §15). */
+  private reviveGraceS = 0;
+  selectedCharacter = 'sprocket';
+  selectedEnvironment = 'subway';
 
   readonly run: RunState = {
     runId: '',
@@ -158,7 +176,9 @@ export class Game {
       options.rewardsBridge ?? (import.meta.env.DEV ? new ConsoleRewardsBridge() : new NoopRewardsBridge());
     this.telemetry =
       options.telemetry ?? (import.meta.env.DEV ? new ConsoleTelemetry() : new NoopTelemetry());
-    this.reviveProvider = options.reviveProvider ?? new AutoReviveProvider();
+    // Resolved in boot(): defaults to the UI countdown overlay (spec §15);
+    // hosts inject their own (e.g. rewarded-action gate) here.
+    this.injectedReviveProvider = options.reviveProvider ?? null;
 
     this.storage = new GameStorage(
       detectStorageProvider(options.storageProvider),
@@ -171,6 +191,17 @@ export class Game {
   async boot(): Promise<void> {
     await this.storage.init(Object.values(Config.storage.keys));
 
+    this.settings = new SettingsStore(this.storage, this.bus);
+    this.reviveProvider = this.injectedReviveProvider ?? new UiReviveProvider(this.uiRoot);
+
+    // Persisted cosmetic selection (character + environment).
+    const sel = this.storage.getJSON<{ character?: string; environment?: string }>(
+      Config.storage.keys.selection,
+      {},
+    );
+    this.selectedCharacter = sel.character ?? 'sprocket';
+    this.selectedEnvironment = sel.environment ?? 'subway';
+
     this.renderer = new GameRenderer(this.container);
     const cam = this.renderer.camera;
     const { offset, lookAt } = Config.camera;
@@ -178,10 +209,10 @@ export class Game {
     cam.lookAt(lookAt.x, lookAt.y, lookAt.z);
 
     this.environment = new EnvironmentSystem(this.scene, this.materials);
-    this.environment.init('subway');
+    this.environment.init(this.selectedEnvironment);
 
     this.movement = new MovementSystem(this.bus);
-    this.playerRig = new PlayerRig(this.scene, this.materials, this.bus, 'sprocket');
+    this.playerRig = new PlayerRig(this.scene, this.materials, this.bus, this.selectedCharacter);
     this.cameraSystem = new CameraSystem(cam);
     this.spawn = new SpawnSystem(this.scene, this.materials);
     this.collision = new CollisionSystem(this.bus);
@@ -193,7 +224,10 @@ export class Game {
     // crash shields, and the Double-Up score multiplier.
     this.powerups.onBonus = (pts, source) => this.score.grant(this.run, pts, source);
     this.spawn.onChunkPlaced = (chunk, entryZ) => this.powerups.maybePlacePickup(chunk, entryZ);
-    this.collision.shieldProvider = (cause) => this.powerups.absorbCrash(cause);
+    // Shield chain: revive grace first (free), then power-ups (Glider is
+    // consumable — it must not break during the grace window).
+    this.collision.shieldProvider = (cause) =>
+      this.reviveGraceS > 0 || this.powerups.absorbCrash(cause);
     this.score.multiplierProvider = () => this.powerups.scoreMult;
 
     this.bus.on('player.crashed', ({ cause, distance }) => this.onCrash(cause, distance));
@@ -211,23 +245,11 @@ export class Game {
     });
 
     this.input = new InputSystem(this.container);
-    this.input.onAnyInput = () => {
-      // TEMP(phase 5): any input on the menu (or after a crash cooldown)
-      // starts a run until the real menu/game-over screens land.
-      if (this.fsm.current === GameState.Menu) {
-        this.startRun(false);
-      } else if (
-        this.fsm.current === GameState.GameOver &&
-        this.sessionTimeS - this.crashAtS > 0.7
-      ) {
-        this.startRun(false);
-      }
-    };
     this.input.onPauseKey = () => {
       if (this.fsm.isRunning) {
-        this.fsm.transition(GameState.Paused);
+        this.pause();
       } else if (this.fsm.current === GameState.Paused) {
-        this.fsm.transition(this.run.tutorial ? GameState.Tutorial : GameState.Playing);
+        this.resume();
       }
     };
     this.input.onGliderKey = () => {
@@ -238,15 +260,8 @@ export class Game {
     this.debugOverlay = new DebugOverlay(this.uiRoot);
     this.debugOverlay.setPoolStatsProvider(() => this.spawn.statsLine());
 
-    // TEMP(phase 5): minimal start hint until the real menu exists.
-    this.tempStartHint = document.createElement('div');
-    this.tempStartHint.className = 'temp-hint';
-    this.tempStartHint.textContent = 'Tap, swipe, or press Space to run — dev build';
-    this.uiRoot.appendChild(this.tempStartHint);
-    this.fsm.onEnter(GameState.Menu, () => {
-      this.input.enabled = false;
-      this.tempStartHint?.classList.remove('hidden');
-    });
+    this.buildScreens();
+    this.applySettingsSideEffects();
 
     // Bridge FSM transitions onto the event bus for any listener.
     this.fsm.onChange((from, to) => this.bus.emit('state.changed', { from, to }));
@@ -264,6 +279,146 @@ export class Game {
     this.fsm.transition(GameState.AgeGate);
     const ofAge = await this.ageGate.verify();
     this.fsm.transition(ofAge ? GameState.Menu : GameState.Blocked);
+    if (ofAge) this.screens.show('menu');
+  }
+
+  // ------------------------------------------------------------ UI wiring
+
+  private buildScreens(): void {
+    this.screens = new ScreenManager(this.uiRoot);
+    this.hud = new HUD(this.uiRoot, this.bus, () => this.pause());
+    this.tutorial = new TutorialSystem(this.hud, this.bus);
+
+    this.menuScreen = new MenuScreen(this.storage, {
+      onPlay: () => {
+        const firstRun = this.storage.getString(Config.storage.keys.tutorialDone) !== '1';
+        this.startRun(firstRun);
+      },
+      onCharacters: () => this.screens.show('characters'),
+      onEnvironments: () => this.screens.show('environments'),
+      onSettings: () => this.screens.show('settings', { backTo: 'menu' }),
+    });
+    this.screens.register('menu', this.menuScreen);
+
+    this.screens.register(
+      'settings',
+      new SettingsScreen(
+        this.settings,
+        (backTo) => this.screens.show(backTo),
+        () => this.resetAllData(),
+      ),
+    );
+
+    this.screens.register(
+      'characters',
+      new CharacterScreen(
+        this.storage,
+        () => this.screens.show('menu'),
+        () => this.selectedCharacter,
+        (id) => this.setCharacter(id),
+      ),
+    );
+    this.screens.register(
+      'environments',
+      new EnvironmentScreen(
+        this.storage,
+        () => this.screens.show('menu'),
+        () => this.selectedEnvironment,
+        (id) => this.setEnvironment(id),
+      ),
+    );
+
+    this.screens.register(
+      'pause',
+      new PauseScreen({
+        onResume: () => this.resume(),
+        onRestart: () => this.startRun(false),
+        onSettings: () => this.screens.show('settings', { backTo: 'pause' }),
+        onQuit: () => this.quitToMenu(),
+      }),
+    );
+
+    this.screens.register(
+      'gameover',
+      new GameOverScreen(
+        () => this.startRun(false),
+        () => this.quitToMenu(),
+      ),
+    );
+
+    // HUD visibility follows the run states.
+    this.fsm.onEnter(GameState.Playing, () => this.hud.setVisible(true));
+    this.fsm.onEnter(GameState.Tutorial, () => this.hud.setVisible(true));
+    this.fsm.onEnter(GameState.Menu, () => {
+      this.hud.setVisible(false);
+      this.input.enabled = false;
+    });
+    this.fsm.onEnter(GameState.GameOver, () => this.hud.setVisible(false));
+  }
+
+  private applySettingsSideEffects(): void {
+    const apply = (): void => {
+      document.body.classList.toggle('high-contrast', this.settings.get('highContrast'));
+      document.body.classList.toggle('reduced-motion', this.settings.get('reducedMotion'));
+      this.cameraSystem.reducedMotion = this.settings.get('reducedMotion');
+    };
+    apply();
+    this.bus.on('settings.changed', ({ key, value }) => {
+      apply();
+      this.telemetry.track('settings_changed', { key, value: value as string | number | boolean });
+    });
+  }
+
+  pause(): void {
+    if (!this.fsm.isRunning) return;
+    if (this.fsm.transition(GameState.Paused)) this.screens.show('pause');
+  }
+
+  resume(): void {
+    if (this.fsm.current !== GameState.Paused) return;
+    if (this.fsm.transition(this.run.tutorial ? GameState.Tutorial : GameState.Playing)) {
+      this.screens.hideAll();
+      this.input.clear();
+    }
+  }
+
+  private quitToMenu(): void {
+    if (this.fsm.current === GameState.Paused) {
+      // A paused-and-quit run still reports its summary (crashCause 'quit').
+      this.input.enabled = false;
+      this.finalizeRun('quit');
+    }
+    if (this.fsm.canTransition(GameState.Menu)) this.fsm.transition(GameState.Menu);
+    this.screens.show('menu');
+  }
+
+  private resetAllData(): void {
+    this.storage.clear(Object.values(Config.storage.keys));
+    window.location.reload();
+  }
+
+  setCharacter(id: string): void {
+    if (id === this.selectedCharacter) return;
+    this.selectedCharacter = id;
+    this.persistSelection();
+    // Swap the rig in place (menu idle keeps animating the new character).
+    this.playerRig.dispose();
+    this.playerRig = new PlayerRig(this.scene, this.materials, this.bus, id);
+    this.bus.emit('milestone', { id: 'character_selected', meta: { character: id } });
+  }
+
+  setEnvironment(id: string): void {
+    if (id === this.selectedEnvironment) return;
+    this.selectedEnvironment = id;
+    this.persistSelection();
+    this.environment.setThemeById(id);
+  }
+
+  private persistSelection(): void {
+    this.storage.setJSON(Config.storage.keys.selection, {
+      character: this.selectedCharacter,
+      environment: this.selectedEnvironment,
+    });
   }
 
   private tick = (dt: number): void => {
@@ -302,16 +457,20 @@ export class Game {
     run.distance += effSpeed * dt;
     run.tier = this.currentTier();
 
+    if (this.reviveGraceS > 0) this.reviveGraceS -= dt;
+
     this.input.update(dt);
     this.movement.update(dt, this.input);
     this.spawn.update(dt, effSpeed, run.tier);
     this.powerups.update(dt, this.spawn, effSpeed);
     this.score.update(dt, run, this.movement, this.spawn);
+    this.tutorial.update(run, this.spawn);
     this.environment.update(dt, effSpeed);
     this.playerRig.update(dt, this.movement, run.speed / Config.run.maxSpeed);
     this.cameraSystem.update(dt, this.movement, effSpeed);
     this.pointsEmitter.update(dt);
     this.powerupHUD.update(dt, this.powerups.hudState());
+    this.hud.update(dt, run);
     // Collision last: verdicts use this frame's final positions.
     this.collision.update(this.movement, this.spawn, run.distance);
   }
@@ -346,28 +505,61 @@ export class Game {
       this.powerups.reset();
       this.powerupHUD.clear();
       this.playerRig.setGlider(false);
+      this.playerRig.flickerRemainS = 0;
+      this.tutorial.reset();
+      this.reviveGraceS = 0;
       // Tutorial runs get extra obstacle-free runway (tier-0 first ~10s, §5).
       this.spawn.reset(tutorial ? 25 : 0);
       this.input.clear();
       this.input.enabled = true;
-      this.tempStartHint?.classList.add('hidden');
+      this.screens.hideAll();
       this.bus.emit('run.started', { runId: run.runId, tutorial });
       this.telemetry.track('run_start', { runId: run.runId, tutorial });
     }
   }
 
-  private onCrash(cause: string, distance: number): void {
-    this.crashAtS = this.sessionTimeS;
+  private async onCrash(cause: string, distance: number): Promise<void> {
     this.input.enabled = false;
     this.input.clear();
     this.cameraSystem.shake(Config.camera.shake.crashMagnitude);
     this.telemetry.track('crash', { cause, distance: Math.round(distance) });
 
-    // Revive flow arrives with the UI phase; for now every crash ends the run.
-    this.endRun(cause);
+    // Revive offer (spec §15): once per run, gated by the pluggable provider.
+    const canRevive = !this.run.reviveUsed && this.fsm.canTransition(GameState.Revive);
+    if (canRevive && this.fsm.transition(GameState.Revive)) {
+      this.bus.emit('revive.offered', {});
+      const granted = await this.reviveProvider.request();
+      if (granted && this.fsm.current === GameState.Revive) {
+        this.performRevive();
+        return;
+      }
+      this.bus.emit('revive.declined', {});
+    }
+    this.endRunToGameOver(cause);
   }
 
-  private endRun(crashCause: string): void {
+  private performRevive(): void {
+    const run = this.run;
+    run.reviveUsed = true;
+    run.tutorial = false; // a revived run continues as a normal run
+    this.movement.softReviveReset();
+    // Cleared stretch: wipe nearby hazards + spawn-free window (spec §15).
+    this.spawn.clearStretch(Config.revive.spawnFreeS * run.speed + 14);
+    this.reviveGraceS = Config.revive.invincibleS;
+    this.playerRig.flickerRemainS = Config.revive.invincibleS;
+    this.input.clear();
+    this.input.enabled = true;
+
+    if (this.fsm.transition(GameState.Playing)) {
+      this.bus.emit('revive.used', {});
+      this.bus.emit('milestone', { id: 'revive_used' });
+      this.rewardsBridge.onMilestone('revive_used');
+      this.telemetry.track('revive', { runId: run.runId, distance: Math.round(run.distance) });
+    }
+  }
+
+  /** Persists results + emits summary events. State handling stays with callers. */
+  private finalizeRun(crashCause: string): { summary: RunSummary; isBest: boolean } {
     const run = this.run;
     const summary: RunSummary = {
       runId: run.runId,
@@ -380,20 +572,27 @@ export class Game {
       crashCause,
     };
 
-    // Baseline persistence (the progression phase formalizes totals/streaks).
     const keys = Config.storage.keys;
     const prevBest = this.storage.getJSON<number>(keys.highScore, 0);
-    if (summary.score > prevBest) this.storage.setJSON(keys.highScore, summary.score);
+    const isBest = summary.score > prevBest;
+    if (isBest) this.storage.setJSON(keys.highScore, summary.score);
     this.storage.setJSON(
       keys.crystalsTotal,
       this.storage.getJSON<number>(keys.crystalsTotal, 0) + run.coins,
     );
+    this.storage.setString(keys.tutorialDone, '1');
 
     this.pointsEmitter.flush();
+    this.bus.emit('run.ended', { summary });
+    this.rewardsBridge.onRunComplete(summary);
+    this.telemetry.track('run_end', { ...summary });
+    return { summary, isBest };
+  }
+
+  private endRunToGameOver(crashCause: string): void {
+    const result = this.finalizeRun(crashCause);
     if (this.fsm.transition(GameState.GameOver)) {
-      this.bus.emit('run.ended', { summary });
-      this.rewardsBridge.onRunComplete(summary);
-      this.telemetry.track('run_end', { ...summary });
+      this.screens.show('gameover', result);
     }
   }
 

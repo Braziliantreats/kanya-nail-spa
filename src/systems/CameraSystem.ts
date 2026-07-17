@@ -21,11 +21,14 @@ export class CameraSystem {
   private shakeTimeS = 0;
   /** Dash FOV envelope timer (-1 = idle). */
   private kickT = -1;
+  /** Spec §11/§16: ALL camera effects respect reduced motion. */
+  reducedMotion = false;
 
   constructor(private camera: THREE.PerspectiveCamera) {}
 
   /** Dash FOV kick (spec §11): +kick over 150ms, hold, ease back over 400ms. */
   dashKick(): void {
+    if (this.reducedMotion) return; // damped out entirely
     this.kickT = 0;
   }
 
@@ -70,7 +73,8 @@ export class CameraSystem {
     );
 
     // Roll on lane changes (applied after lookAt, which resets orientation).
-    const targetRoll = -movement.laneChangeDir * cfg.rollDeg * DEG2RAD;
+    const rollScale = this.reducedMotion ? 0.25 : 1;
+    const targetRoll = -movement.laneChangeDir * cfg.rollDeg * DEG2RAD * rollScale;
     this.roll = lerp(this.roll, targetRoll, damp(10, dt));
     this.camera.rotation.z += this.roll;
 
@@ -97,7 +101,7 @@ export class CameraSystem {
 
   /** Directional crash shake (spec §11: ~200ms, decaying). */
   shake(magnitude: number): void {
-    this.shakeAmp = magnitude;
+    this.shakeAmp = magnitude * (this.reducedMotion ? 0.2 : 1);
     this.shakeTimeS = 0;
   }
 }

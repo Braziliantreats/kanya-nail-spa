@@ -37,11 +37,13 @@ export class PlayerRig {
   private airBlend = 0;
   /** Squash (+) / stretch (−) impulse, decays exponentially. */
   private squashImpulse = 0;
+  /** Post-revive invincibility flicker time remaining (spec §15). */
+  flickerRemainS = 0;
 
   private geometries: THREE.BufferGeometry[] = [];
 
   constructor(
-    scene: THREE.Scene,
+    private scene: THREE.Scene,
     private materials: ToonMaterialFactory,
     bus: EventBus,
     characterId: string = 'sprocket',
@@ -169,6 +171,13 @@ export class PlayerRig {
     this.group.position.x = m.visualX;
     this.group.position.y = m.y;
 
+    // Revive invincibility flicker (spec §15).
+    if (this.flickerRemainS > 0) {
+      this.flickerRemainS -= dt;
+      this.group.visible = Math.sin(this.flickerRemainS * 28) > -0.35;
+      if (this.flickerRemainS <= 0) this.group.visible = true;
+    }
+
     // Pose blends (continuous cross-fade between run/slide/air).
     const blendK = damp(14, dt);
     this.slideBlend = lerp(this.slideBlend, m.slideActive ? 1 : 0, blendK);
@@ -236,6 +245,7 @@ export class PlayerRig {
   }
 
   dispose(): void {
+    this.scene.remove(this.group, this.shadow);
     for (const geo of this.geometries) geo.dispose();
     this.geometries.length = 0;
     this.shadowMat.dispose();

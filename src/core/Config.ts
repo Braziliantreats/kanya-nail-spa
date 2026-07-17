@@ -210,6 +210,8 @@ export const Config = {
       streak: 'streak',
       missions: 'missions',
       unlocks: 'unlocks',
+      selection: 'selection',
+      tutorialDone: 'tutorial-done',
     },
   },
 

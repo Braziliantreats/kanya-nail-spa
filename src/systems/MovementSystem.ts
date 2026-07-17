@@ -69,6 +69,21 @@ export class MovementSystem {
     this.laneTween.value = 0;
   }
 
+  /** Revive (spec §15): clear vertical/slide state but KEEP the current lane. */
+  softReviveReset(): void {
+    this.y = 0;
+    this.vy = 0;
+    this.grounded = true;
+    this.fastFalling = false;
+    this.flyMode = false;
+    this.floatyGravityMult = 1;
+    if (this.sliding) {
+      this.sliding = false;
+      this.slideRemainS = 0;
+      this.bus.emit('player.slide.ended', EMPTY);
+    }
+  }
+
   /** Enter/exit Liftoff flight. Exiting drops the player back onto the arc. */
   setFly(active: boolean, height = 0): void {
     this.flyMode = active;
