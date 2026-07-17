@@ -1,0 +1,12 @@
+[
+  { "id": "collect-300", "label": "Collect 300 crystals", "type": "crystals-total", "target": 300, "reward": 150 },
+  { "id": "collect-800", "label": "Collect 800 crystals", "type": "crystals-total", "target": 800, "reward": 300 },
+  { "id": "run-800", "label": "Travel 800m in one run", "type": "distance-single-run", "target": 800, "reward": 200 },
+  { "id": "run-2000", "label": "Travel 2,000m in one run", "type": "distance-single-run", "target": 2000, "reward": 500 },
+  { "id": "nearmiss-10", "label": "Near-miss 10 times", "type": "nearmiss-total", "target": 10, "reward": 200 },
+  { "id": "nearmiss-25", "label": "Near-miss 25 times", "type": "nearmiss-total", "target": 25, "reward": 400 },
+  { "id": "zen-2", "label": "Use Zen Mode twice", "type": "powerup-use", "powerup": "zen", "target": 2, "reward": 250 },
+  { "id": "magnet-3", "label": "Use Magnet 3 times", "type": "powerup-use", "powerup": "magnet", "target": 3, "reward": 200 },
+  { "id": "dash-3", "label": "Use Dash 3 times", "type": "powerup-use", "powerup": "dash", "target": 3, "reward": 200 },
+  { "id": "coins-run-120", "label": "Collect 120 crystals in one run", "type": "crystals-single-run", "target": 120, "reward": 250 }
+]

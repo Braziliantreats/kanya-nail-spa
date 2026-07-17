@@ -15,6 +15,7 @@
     "forceConsistentCasingInFileNames": true,
 
     /* Bundler mode */
+    "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,

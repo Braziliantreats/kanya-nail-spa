@@ -53,6 +53,9 @@ import { ParticleSystem } from './render/ParticleSystem';
 import { ZenFx } from './ui/ZenFx';
 import { AudioManager, type MusicMood } from './audio/AudioManager';
 import { Haptics } from './haptics/Haptics';
+import { ProgressionSystem } from './systems/ProgressionSystem';
+import { MissionsScreen } from './ui/MissionsScreen';
+import { el } from './ui/dom';
 import { PICKUP_COLORS, type PowerupType } from './data/powerups';
 import { ENVIRONMENTS, ENVIRONMENT_ORDER } from './data/environments';
 import { PlayerRig } from './render/PlayerRig';
@@ -142,6 +145,9 @@ export class Game {
   private zenFx!: ZenFx;
   audio!: AudioManager;
   haptics!: Haptics;
+  progression!: ProgressionSystem;
+  private toastEl: HTMLElement | null = null;
+  private toastTimer = 0;
   /** Near-miss hit-stop (spec §5: 60–100ms celebratory freeze). */
   private hitStopS = 0;
   /** Next auto environment gateway distance (spec §9: every 1,000m). */
@@ -280,6 +286,15 @@ export class Game {
     this.bus.on('powerup.expired', () => this.audio.sfx('powerup-end'));
     this.bus.on('revive.used', () => this.audio.sfx('revive'));
     this.bus.on('milestone', () => this.audio.sfx('milestone'));
+
+    // Progression (spec §8) + generic milestone → RewardsBridge forwarding.
+    this.progression = new ProgressionSystem(this.storage, this.bus, (text) =>
+      this.showToast(text),
+    );
+    this.bus.on('milestone', ({ id, meta }) => {
+      this.rewardsBridge.onMilestone(id, meta);
+      if (id === 'mission') this.telemetry.track('mission_complete', { ...meta });
+    });
 
     this.bus.on('player.crashed', ({ cause, distance }) => this.onCrash(cause, distance));
     this.bus.on('powerup.activated', ({ type, durationS }) => {
@@ -442,6 +457,9 @@ export class Game {
         () => this.quitToMenu(),
       ),
     );
+
+    this.screens.register('missions', new MissionsScreen(this.progression, () => this.screens.show('menu')));
+    this.menuScreen.addNavButton('Missions', () => this.screens.show('missions'));
 
     // HUD visibility follows the run states.
     this.fsm.onEnter(GameState.Playing, () => this.hud.setVisible(true));
@@ -651,6 +669,7 @@ export class Game {
       this.input.clear();
       this.input.enabled = true;
       this.screens.hideAll();
+      this.progression.onRunStarted();
       this.bus.emit('run.started', { runId: run.runId, tutorial });
       this.telemetry.track('run_start', { runId: run.runId, tutorial });
     }
@@ -698,8 +717,8 @@ export class Game {
 
     if (this.fsm.transition(GameState.Playing)) {
       this.bus.emit('revive.used', {});
+      // The generic milestone listener forwards this to the RewardsBridge.
       this.bus.emit('milestone', { id: 'revive_used' });
-      this.rewardsBridge.onMilestone('revive_used');
       this.telemetry.track('revive', { runId: run.runId, distance: Math.round(run.distance) });
     }
   }
@@ -732,7 +751,24 @@ export class Game {
     this.bus.emit('run.ended', { summary });
     this.rewardsBridge.onRunComplete(summary);
     this.telemetry.track('run_end', { ...summary });
+    this.progression.onRunEnded(summary);
     return { summary, isBest };
+  }
+
+  /** Feedback toast: HUD popup mid-run, floating toast on menus. */
+  showToast(text: string): void {
+    if (this.fsm.isRunning) {
+      this.hud.popup(text, 'streak');
+      return;
+    }
+    if (!this.toastEl) {
+      this.toastEl = el('div', 'toast');
+      this.uiRoot.appendChild(this.toastEl);
+    }
+    this.toastEl.textContent = text;
+    this.toastEl.classList.add('show');
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => this.toastEl?.classList.remove('show'), 2600);
   }
 
   private endRunToGameOver(crashCause: string): void {
