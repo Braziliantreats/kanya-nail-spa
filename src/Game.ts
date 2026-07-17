@@ -51,6 +51,8 @@ import { UiReviveProvider } from './ui/ReviveOverlay';
 import { HUD } from './ui/HUD';
 import { ParticleSystem } from './render/ParticleSystem';
 import { ZenFx } from './ui/ZenFx';
+import { AudioManager, type MusicMood } from './audio/AudioManager';
+import { Haptics } from './haptics/Haptics';
 import { PICKUP_COLORS, type PowerupType } from './data/powerups';
 import { ENVIRONMENTS, ENVIRONMENT_ORDER } from './data/environments';
 import { PlayerRig } from './render/PlayerRig';
@@ -138,6 +140,8 @@ export class Game {
 
   particles!: ParticleSystem;
   private zenFx!: ZenFx;
+  audio!: AudioManager;
+  haptics!: Haptics;
   /** Near-miss hit-stop (spec §5: 60–100ms celebratory freeze). */
   private hitStopS = 0;
   /** Next auto environment gateway distance (spec §9: every 1,000m). */
@@ -244,8 +248,38 @@ export class Game {
 
     this.particles = new ParticleSystem(this.scene);
     this.zenFx = new ZenFx(this.uiRoot, this.container);
-    this.environment.onThemeChanged = (theme) => this.particles.setAmbient(theme.ambientParticles);
+    this.audio = new AudioManager(this.settings);
+    this.haptics = new Haptics(this.settings);
+    this.environment.onThemeChanged = (theme) => {
+      this.particles.setAmbient(theme.ambientParticles);
+      this.audio.setMood(theme.musicMood as MusicMood);
+      this.audio.sfx('gateway');
+    };
     this.particles.setAmbient(this.environment.theme.ambientParticles);
+    this.audio.setMood(this.environment.theme.musicMood as MusicMood);
+
+    // Audio unlock on the first user gesture (browser autoplay policy, §12)
+    // + button click sounds via delegation (covers every screen). The
+    // InputSystem-side unlock hook attaches after input is constructed below.
+    this.uiRoot.addEventListener('pointerdown', () => this.audio.unlock(), { once: true });
+    this.uiRoot.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('button')) this.audio.sfx('ui');
+    });
+
+    // SFX + haptics event wiring (spec §12/§13).
+    this.bus.on('player.jumped', () => this.audio.sfx('jump'));
+    this.bus.on('player.landed', () => this.audio.sfx('land'));
+    this.bus.on('player.slide.started', () => this.audio.sfx('slide'));
+    this.bus.on('player.lane.changed', () => this.audio.sfx('whoosh'));
+    this.bus.on('crystal.collected', ({ streak }) => this.audio.sfx('crystal', Math.min(streak, 12)));
+    this.bus.on('nearmiss', () => {
+      this.audio.sfx('nearmiss');
+      this.haptics.nearMiss();
+    });
+    this.bus.on('powerup.expiring', () => this.audio.sfx('powerup-warn'));
+    this.bus.on('powerup.expired', () => this.audio.sfx('powerup-end'));
+    this.bus.on('revive.used', () => this.audio.sfx('revive'));
+    this.bus.on('milestone', () => this.audio.sfx('milestone'));
 
     this.bus.on('player.crashed', ({ cause, distance }) => this.onCrash(cause, distance));
     this.bus.on('powerup.activated', ({ type, durationS }) => {
@@ -257,6 +291,8 @@ export class Game {
       }
       if (type === 'glider') this.playerRig.setGlider(true);
       if (type === 'zen') this.zenFx.setActive(true);
+      this.audio.sfx(type === 'glider' ? 'glider' : 'powerup');
+      this.haptics.powerup();
       this.particles.burst(this.movement.visualX, 1.2, 0, {
         count: 16,
         color: PICKUP_COLORS[type as PowerupType] ?? 0xffffff,
@@ -305,6 +341,7 @@ export class Game {
     });
 
     this.input = new InputSystem(this.container);
+    this.input.onAnyInput = () => this.audio.unlock();
     this.input.onPauseKey = () => {
       if (this.fsm.isRunning) {
         this.pause();
@@ -422,6 +459,7 @@ export class Game {
       document.body.classList.toggle('reduced-motion', this.settings.get('reducedMotion'));
       this.cameraSystem.reducedMotion = this.settings.get('reducedMotion');
       this.particles.reducedMotion = this.settings.get('reducedMotion');
+      this.audio.applyVolumes();
     };
     apply();
     this.bus.on('settings.changed', ({ key, value }) => {
@@ -553,6 +591,11 @@ export class Game {
     }
     this.particles.update(dt, effSpeed * dt, this.renderer.camera.quaternion);
 
+    // Adaptive music intensity follows the speed ramp (spec §12).
+    this.audio.setIntensity(
+      (run.speed - Config.run.baseSpeed) / (Config.run.maxSpeed - Config.run.baseSpeed),
+    );
+
     // Collision last: verdicts use this frame's final positions.
     this.collision.update(this.movement, this.spawn, run.distance);
   }
@@ -597,6 +640,7 @@ export class Game {
       // Runs start in the selected environment; rotation resumes from there.
       this.environment.applyTheme(ENVIRONMENTS[this.selectedEnvironment]);
       this.particles.setAmbient(ENVIRONMENTS[this.selectedEnvironment].ambientParticles);
+      this.audio.setMood(ENVIRONMENTS[this.selectedEnvironment].musicMood as MusicMood);
       this.gatewayIdx = ENVIRONMENT_ORDER.indexOf(
         this.selectedEnvironment as (typeof ENVIRONMENT_ORDER)[number],
       );
@@ -616,6 +660,14 @@ export class Game {
     this.input.enabled = false;
     this.input.clear();
     this.cameraSystem.shake(Config.camera.shake.crashMagnitude);
+    this.audio.sfx('crash');
+    this.haptics.crash();
+    this.particles.burst(this.movement.visualX, 1.0, 0, {
+      count: 22,
+      color: 0xff3f5c,
+      speed: 4.4,
+      ttl: 0.7,
+    });
     this.telemetry.track('crash', { cause, distance: Math.round(distance) });
 
     // Revive offer (spec §15): once per run, gated by the pluggable provider.
@@ -711,6 +763,7 @@ export class Game {
     this.playerRig.dispose();
     this.powerups.dispose();
     this.particles.dispose();
+    this.audio.dispose();
     this.spawn.dispose();
     this.environment.dispose();
     this.materials.disposeAll();
