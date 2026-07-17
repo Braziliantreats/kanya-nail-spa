@@ -205,6 +205,28 @@ body {
   border-radius: 8px;
 }
 
+/* ---------- TEMP dev hint (removed when the real menu lands) ---------- */
+
+.temp-hint {
+  position: fixed;
+  left: 50%;
+  bottom: calc(56px + var(--safe-bottom));
+  transform: translateX(-50%);
+  z-index: 15;
+  pointer-events: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--c-text);
+  background: rgba(30, 22, 66, 0.75);
+  border: 1px solid rgba(41, 230, 255, 0.3);
+  white-space: nowrap;
+}
+
+.temp-hint.hidden {
+  display: none;
+}
+
 /* ---------- Boot error ---------- */
 
 .fatal-error {

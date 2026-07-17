@@ -8,7 +8,11 @@ import './ui/styles.css';
 import { Game } from './Game';
 
 try {
-  Game.init({});
+  const game = Game.init({});
+  // ?debug=1 exposes the instance for the browser test harness + tuning.
+  if (new URLSearchParams(window.location.search).get('debug') === '1') {
+    (window as unknown as Record<string, unknown>).__crystalRush = game;
+  }
 } catch (err) {
   console.error('[CrystalRush] fatal boot error', err);
   const el = document.createElement('div');

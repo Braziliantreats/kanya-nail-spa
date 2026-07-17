@@ -31,6 +31,10 @@ import { DefaultAgeGate, type AgeGate } from './integrations/AgeGate';
 import { AutoReviveProvider, type ReviveProvider } from './integrations/ReviveProvider';
 import { DebugOverlay } from './ui/DebugOverlay';
 import { LegalFooter } from './ui/LegalFooter';
+import { InputSystem } from './systems/InputSystem';
+import { MovementSystem } from './systems/MovementSystem';
+import { CameraSystem } from './systems/CameraSystem';
+import { PlayerRig } from './render/PlayerRig';
 
 export interface GameInitOptions {
   /** Element the WebGL canvas mounts into (default #game-container). */
@@ -90,6 +94,12 @@ export class Game {
   /** Kept public so the settings screen can refresh() after live config edits. */
   legalFooter!: LegalFooter;
   readonly pointsEmitter: DebouncedPointsEmitter;
+
+  input!: InputSystem;
+  movement!: MovementSystem;
+  cameraSystem!: CameraSystem;
+  playerRig!: PlayerRig;
+  private tempStartHint: HTMLElement | null = null;
 
   readonly run: RunState = {
     runId: '',
@@ -157,8 +167,36 @@ export class Game {
     this.environment = new EnvironmentSystem(this.scene, this.materials);
     this.environment.init('subway');
 
+    this.movement = new MovementSystem(this.bus);
+    this.playerRig = new PlayerRig(this.scene, this.materials, this.bus, 'sprocket');
+    this.cameraSystem = new CameraSystem(cam);
+
+    this.input = new InputSystem(this.container);
+    this.input.onAnyInput = () => {
+      // TEMP(phase 5): any input on the menu starts a run until the real
+      // main-menu screen lands.
+      if (this.fsm.current === GameState.Menu) this.startRun(false);
+    };
+    this.input.onPauseKey = () => {
+      if (this.fsm.isRunning) {
+        this.fsm.transition(GameState.Paused);
+      } else if (this.fsm.current === GameState.Paused) {
+        this.fsm.transition(this.run.tutorial ? GameState.Tutorial : GameState.Playing);
+      }
+    };
+
     this.legalFooter = new LegalFooter(this.uiRoot);
     this.debugOverlay = new DebugOverlay(this.uiRoot);
+
+    // TEMP(phase 5): minimal start hint until the real menu exists.
+    this.tempStartHint = document.createElement('div');
+    this.tempStartHint.className = 'temp-hint';
+    this.tempStartHint.textContent = 'Tap, swipe, or press Space to run — dev build';
+    this.uiRoot.appendChild(this.tempStartHint);
+    this.fsm.onEnter(GameState.Menu, () => {
+      this.input.enabled = false;
+      this.tempStartHint?.classList.remove('hidden');
+    });
 
     // Bridge FSM transitions onto the event bus for any listener.
     this.fsm.onChange((from, to) => this.bus.emit('state.changed', { from, to }));
@@ -184,8 +222,10 @@ export class Game {
     if (this.fsm.isRunning) {
       this.updateRun(dt);
     } else if (state === GameState.Menu || state === GameState.GameOver) {
-      // Ambient world drift behind menu/game-over screens.
+      // Ambient world drift + idle character behind menu/game-over screens.
       this.environment.update(dt, Config.run.menuAmbientSpeed);
+      this.playerRig.idle(dt);
+      this.cameraSystem.update(dt, this.movement, 0);
     }
 
     this.sampleFps(dt);
@@ -209,7 +249,11 @@ export class Game {
     run.distance += run.speed * dt;
     run.tier = this.currentTier();
 
+    this.input.update(dt);
+    this.movement.update(dt, this.input);
     this.environment.update(dt, run.speed);
+    this.playerRig.update(dt, this.movement, run.speed / Config.run.maxSpeed);
+    this.cameraSystem.update(dt, this.movement, run.speed);
     this.pointsEmitter.update(dt);
   }
 
@@ -238,6 +282,10 @@ export class Game {
 
     this.pointsEmitter.setRun(run.runId);
     if (this.fsm.transition(tutorial ? GameState.Tutorial : GameState.Playing)) {
+      this.movement.reset();
+      this.input.clear();
+      this.input.enabled = true;
+      this.tempStartHint?.classList.add('hidden');
       this.bus.emit('run.started', { runId: run.runId, tutorial });
       this.telemetry.track('run_start', { runId: run.runId, tutorial });
     }
@@ -260,6 +308,8 @@ export class Game {
   /** Full teardown — dispose GPU resources (spec §18). */
   dispose(): void {
     this.loop.dispose();
+    this.input.dispose();
+    this.playerRig.dispose();
     this.environment.dispose();
     this.materials.disposeAll();
     this.renderer.dispose();
