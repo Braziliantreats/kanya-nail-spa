@@ -278,9 +278,10 @@ export class Game {
     this.bus.on('player.slide.started', () => this.audio.sfx('slide'));
     this.bus.on('player.lane.changed', () => this.audio.sfx('whoosh'));
     this.bus.on('crystal.collected', ({ streak }) => this.audio.sfx('crystal', Math.min(streak, 12)));
-    this.bus.on('nearmiss', () => {
+    this.bus.on('nearmiss', ({ obstacleType }) => {
       this.audio.sfx('nearmiss');
       this.haptics.nearMiss();
+      this.telemetry.track('near_miss', { obstacleType, distance: Math.round(this.run.distance) });
     });
     this.bus.on('powerup.expiring', () => this.audio.sfx('powerup-warn'));
     this.bus.on('powerup.expired', () => this.audio.sfx('powerup-end'));
