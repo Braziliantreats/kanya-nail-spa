@@ -55,6 +55,8 @@ const MOVER_FREEZE_Z = -2.4; // collider freezes once this close to the player
 export class SpawnSystem {
   readonly crystals: CrystalField;
   readonly active: ActiveObstacle[] = [];
+  /** Called after each chunk lands (power-up placement hooks in here). */
+  onChunkPlaced: ((chunk: PatternChunk, entryZ: number) => void) | null = null;
 
   private pools = new Map<ObstacleType, ObjectPool<THREE.Group>>();
   private entryPool: ActiveObstacle[] = [];
@@ -207,6 +209,7 @@ export class SpawnSystem {
     const entryZ = this.frontierZ;
     for (const ob of chunk.obstacles) this.placeObstacle(ob.type, ob.lane, ob.toLane, entryZ - ob.z);
     for (const line of chunk.crystals) this.placeCrystals(line, entryZ);
+    this.onChunkPlaced?.(chunk, entryZ);
 
     const [gapMin, gapMax] = tierCfg.spawnGapRange;
     const gap = gapMin + Math.random() * (gapMax - gapMin);

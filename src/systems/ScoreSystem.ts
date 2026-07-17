@@ -114,6 +114,11 @@ export class ScoreSystem {
     }
   }
 
+  /** External bonus grants (power-up replace refunds, streak bonuses, …). */
+  grant(run: RunState, points: number, source: string): void {
+    this.addScore(run, points, source);
+  }
+
   private addScore(run: RunState, points: number, source: string): void {
     if (points <= 0) return;
     run.score += points;

@@ -14,17 +14,46 @@ const DEG2RAD = Math.PI / 180;
 
 export class CameraSystem {
   private roll = 0;
-  /** Extra FOV added by Dash kicks (juice phase drives this). */
+  /** Extra FOV added by Dash kicks. */
   fovKickDeg = 0;
-  /** Shake amplitude (crash feedback, juice phase drives this). */
+  /** Shake amplitude (crash feedback). */
   private shakeAmp = 0;
   private shakeTimeS = 0;
+  /** Dash FOV envelope timer (-1 = idle). */
+  private kickT = -1;
 
   constructor(private camera: THREE.PerspectiveCamera) {}
+
+  /** Dash FOV kick (spec §11): +kick over 150ms, hold, ease back over 400ms. */
+  dashKick(): void {
+    this.kickT = 0;
+  }
+
+  private updateKick(dt: number): void {
+    if (this.kickT < 0) return;
+    this.kickT += dt;
+    const { inMs, holdMs, outMs } = Config.camera.dashFov;
+    const kick = Config.powerups.dash.fovKickDeg;
+    const tIn = inMs / 1000;
+    const tHold = tIn + holdMs / 1000;
+    const tOut = tHold + outMs / 1000;
+    if (this.kickT <= tIn) {
+      this.fovKickDeg = kick * (this.kickT / tIn);
+    } else if (this.kickT <= tHold) {
+      this.fovKickDeg = kick;
+    } else if (this.kickT <= tOut) {
+      const t = (this.kickT - tHold) / (tOut - tHold);
+      this.fovKickDeg = kick * (1 - t * t); // ease back
+    } else {
+      this.fovKickDeg = 0;
+      this.kickT = -1;
+    }
+  }
 
   update(dt: number, movement: MovementSystem, speed: number): void {
     const cfg = Config.camera;
     const k = damp(cfg.followLerp, dt);
+    this.updateKick(dt);
 
     // Soft catch-up toward the player's lateral position + jump height.
     const targetX = movement.visualX * cfg.lateralLookahead;

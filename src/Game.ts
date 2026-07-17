@@ -37,6 +37,8 @@ import { CameraSystem } from './systems/CameraSystem';
 import { SpawnSystem } from './systems/SpawnSystem';
 import { CollisionSystem } from './systems/CollisionSystem';
 import { ScoreSystem } from './systems/ScoreSystem';
+import { PowerupSystem } from './systems/PowerupSystem';
+import { PowerupHUD } from './ui/PowerupHUD';
 import { PlayerRig } from './render/PlayerRig';
 import type { RunSummary } from './integrations/RewardsBridge';
 
@@ -106,6 +108,8 @@ export class Game {
   spawn!: SpawnSystem;
   collision!: CollisionSystem;
   score!: ScoreSystem;
+  powerups!: PowerupSystem;
+  private powerupHUD!: PowerupHUD;
   private tempStartHint: HTMLElement | null = null;
   private sessionTimeS = 0;
   private crashAtS = -99;
@@ -182,7 +186,29 @@ export class Game {
     this.spawn = new SpawnSystem(this.scene, this.materials);
     this.collision = new CollisionSystem(this.bus);
     this.score = new ScoreSystem(this.bus, this.pointsEmitter);
+    this.powerups = new PowerupSystem(this.scene, this.materials, this.bus, this.movement);
+    this.powerupHUD = new PowerupHUD(this.uiRoot, () => this.powerups.deployGlider());
+
+    // Power-up wiring (spec §7): stacking bonus refunds, safe-path placement,
+    // crash shields, and the Double-Up score multiplier.
+    this.powerups.onBonus = (pts, source) => this.score.grant(this.run, pts, source);
+    this.spawn.onChunkPlaced = (chunk, entryZ) => this.powerups.maybePlacePickup(chunk, entryZ);
+    this.collision.shieldProvider = (cause) => this.powerups.absorbCrash(cause);
+    this.score.multiplierProvider = () => this.powerups.scoreMult;
+
     this.bus.on('player.crashed', ({ cause, distance }) => this.onCrash(cause, distance));
+    this.bus.on('powerup.activated', ({ type, durationS }) => {
+      this.run.powerupsUsed[type] = (this.run.powerupsUsed[type] ?? 0) + 1;
+      this.telemetry.track('powerup_used', { type, durationS });
+      if (type === 'dash') this.cameraSystem.dashKick();
+      if (type === 'glider') this.playerRig.setGlider(true);
+    });
+    this.bus.on('powerup.extended', ({ type }) => {
+      if (type === 'dash') this.cameraSystem.dashKick();
+    });
+    this.bus.on('powerup.expired', ({ type }) => {
+      if (type === 'glider') this.playerRig.setGlider(false);
+    });
 
     this.input = new InputSystem(this.container);
     this.input.onAnyInput = () => {
@@ -203,6 +229,9 @@ export class Game {
       } else if (this.fsm.current === GameState.Paused) {
         this.fsm.transition(this.run.tutorial ? GameState.Tutorial : GameState.Playing);
       }
+    };
+    this.input.onGliderKey = () => {
+      if (this.fsm.isRunning) this.powerups.deployGlider();
     };
 
     this.legalFooter = new LegalFooter(this.uiRoot);
@@ -268,17 +297,21 @@ export class Game {
     run.elapsedS += dt;
     // Delta-time speed ramp toward the cap (spec §5).
     run.speed = Math.min(Config.run.maxSpeed, run.speed + Config.run.ramp * dt);
-    run.distance += run.speed * dt;
+    // Dash multiplies the world's effective scroll speed (spec §7).
+    const effSpeed = run.speed * this.powerups.speedMult;
+    run.distance += effSpeed * dt;
     run.tier = this.currentTier();
 
     this.input.update(dt);
     this.movement.update(dt, this.input);
-    this.spawn.update(dt, run.speed, run.tier);
+    this.spawn.update(dt, effSpeed, run.tier);
+    this.powerups.update(dt, this.spawn, effSpeed);
     this.score.update(dt, run, this.movement, this.spawn);
-    this.environment.update(dt, run.speed);
+    this.environment.update(dt, effSpeed);
     this.playerRig.update(dt, this.movement, run.speed / Config.run.maxSpeed);
-    this.cameraSystem.update(dt, this.movement, run.speed);
+    this.cameraSystem.update(dt, this.movement, effSpeed);
     this.pointsEmitter.update(dt);
+    this.powerupHUD.update(dt, this.powerups.hudState());
     // Collision last: verdicts use this frame's final positions.
     this.collision.update(this.movement, this.spawn, run.distance);
   }
@@ -310,6 +343,9 @@ export class Game {
     if (this.fsm.transition(tutorial ? GameState.Tutorial : GameState.Playing)) {
       this.movement.reset();
       this.score.reset();
+      this.powerups.reset();
+      this.powerupHUD.clear();
+      this.playerRig.setGlider(false);
       // Tutorial runs get extra obstacle-free runway (tier-0 first ~10s, §5).
       this.spawn.reset(tutorial ? 25 : 0);
       this.input.clear();
@@ -380,6 +416,7 @@ export class Game {
     this.loop.dispose();
     this.input.dispose();
     this.playerRig.dispose();
+    this.powerups.dispose();
     this.spawn.dispose();
     this.environment.dispose();
     this.materials.disposeAll();

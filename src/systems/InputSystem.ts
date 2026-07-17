@@ -30,6 +30,8 @@ export class InputSystem {
   onAnyInput: (() => void) | null = null;
   /** Escape / P. */
   onPauseKey: (() => void) | null = null;
+  /** G / F — deploy the Glider from inventory (spec §7). */
+  onGliderKey: (() => void) | null = null;
 
   private slots: Slot[] = Array.from({ length: SLOT_COUNT }, () => ({
     action: 'left',
@@ -139,6 +141,10 @@ export class InputSystem {
       case 'Escape':
       case 'KeyP':
         this.onPauseKey?.();
+        break;
+      case 'KeyG':
+      case 'KeyF':
+        this.onGliderKey?.();
         break;
     }
   };

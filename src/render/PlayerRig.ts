@@ -30,6 +30,7 @@ export class PlayerRig {
 
   private shadow: THREE.Mesh;
   private shadowMat: THREE.MeshBasicMaterial;
+  private gliderBoard!: THREE.Mesh;
 
   private runPhase = 0;
   private slideBlend = 0;
@@ -150,6 +151,16 @@ export class PlayerRig {
     this.body.add(torso, core, hips, this.head, this.armL, this.armR);
     // Legs attach to the root so slides pitch the body while legs extend.
     this.group.add(this.legL, this.legR);
+
+    // Glider board — hidden until deployed (spec §7).
+    this.gliderBoard = this.box(0.95, 0.08, 0.5, 0x2b2350, 0xff8f5c);
+    this.gliderBoard.position.y = -0.02;
+    this.gliderBoard.visible = false;
+    this.group.add(this.gliderBoard);
+  }
+
+  setGlider(visible: boolean): void {
+    this.gliderBoard.visible = visible;
   }
 
   /** Per-frame update while a run (or menu idle) is active. */

@@ -114,7 +114,7 @@ export const Config = {
     doubleUp: { durationS: 10, multiplier: 2 },
     liftoff: { durationS: 6, flyHeight: 3.4, riseTimeMs: 500 },
     glider: { maxDurationS: 20, cooldownS: 12 },
-    zen: { durationS: 5, driftLerp: 3.5 },
+    zen: { durationS: 5, floatyGravityMult: 0.5 },
     dash: { durationS: 3, speedMult: 1.45, fovKickDeg: 10 },
     /** Re-collecting an active power-up extends it, capped at base × this. */
     extensionCapMult: 1.5,

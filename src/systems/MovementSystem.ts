@@ -9,7 +9,7 @@
  */
 
 import { Config, computeJumpPhysics } from '../core/Config';
-import { easeOutCubic, Tween } from '../core/easing';
+import { damp, easeOutCubic, lerp, Tween } from '../core/easing';
 import type { EventBus } from '../core/Events';
 import type { GameAction, InputSystem } from './InputSystem';
 
@@ -27,6 +27,12 @@ export class MovementSystem {
   private vy = 0;
   grounded = true;
   private fastFalling = false;
+
+  /** Liftoff (spec §7): hover at a fixed height, ignore gravity. */
+  flyMode = false;
+  private flyTargetY = 0;
+  /** Zen Mode floaty drift: scales gravity while airborne. */
+  floatyGravityMult = 1;
 
   private sliding = false;
   private slideRemainS = 0;
@@ -57,8 +63,28 @@ export class MovementSystem {
     this.fastFalling = false;
     this.sliding = false;
     this.slideRemainS = 0;
+    this.flyMode = false;
+    this.floatyGravityMult = 1;
     this.laneTween.finish();
     this.laneTween.value = 0;
+  }
+
+  /** Enter/exit Liftoff flight. Exiting drops the player back onto the arc. */
+  setFly(active: boolean, height = 0): void {
+    this.flyMode = active;
+    if (active) {
+      this.flyTargetY = height;
+      this.grounded = false;
+      this.vy = 0;
+      if (this.sliding) {
+        this.sliding = false;
+        this.slideRemainS = 0;
+        this.bus.emit('player.slide.ended', EMPTY);
+      }
+    } else {
+      this.vy = 0;
+      this.fastFalling = false;
+    }
   }
 
   get airborne(): boolean {
@@ -82,8 +108,14 @@ export class MovementSystem {
     }
 
     // --- Vertical integration (delta-time, NOT frame-count — spec §5) ---
-    if (!this.grounded) {
-      const g = this.gravity * (this.fastFalling ? Config.jump.fastFallGravityMult : 1);
+    if (this.flyMode) {
+      // Liftoff hover: exponential ease toward flight height, no gravity.
+      this.y = lerp(this.y, this.flyTargetY, damp(5, dt));
+    } else if (!this.grounded) {
+      const g =
+        this.gravity *
+        (this.fastFalling ? Config.jump.fastFallGravityMult : 1) *
+        this.floatyGravityMult;
       // Velocity-Verlet step: exact parabolic trajectory for constant g, so
       // jump height/airtime are identical at 30fps and 60fps (spec §20-16).
       this.y += this.vy * dt - 0.5 * g * dt * dt;
@@ -144,6 +176,7 @@ export class MovementSystem {
   }
 
   private tryJump(): boolean {
+    if (this.flyMode) return true; // flying — consume as no-op
     if (!this.grounded) return false; // keep buffered → fires on landing (queuing)
     if (this.sliding) {
       // Jump cancels slide (one vertical action at a time).
@@ -159,6 +192,7 @@ export class MovementSystem {
   }
 
   private tryDown(): boolean {
+    if (this.flyMode) return true; // flying — consume as no-op
     if (!this.grounded) {
       // Air-control fast-fall — the §5 skill move; allowed during any jump.
       if (!this.fastFalling) {

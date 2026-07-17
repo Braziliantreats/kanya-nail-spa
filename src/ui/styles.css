@@ -205,6 +205,73 @@ body {
   border-radius: 8px;
 }
 
+/* ---------- Power-up HUD (spec §7: icon row + radial countdown) ---------- */
+
+.powerup-hud {
+  position: fixed;
+  top: calc(64px + var(--safe-top));
+  right: calc(10px + var(--safe-right));
+  z-index: 14;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.pu-chip {
+  pointer-events: none;
+  position: relative;
+  width: 46px;
+  height: 46px;
+  min-width: 44px; /* tap-target floor (spec §16) */
+  min-height: 44px;
+  padding: 3px;
+  border: 0;
+  border-radius: 50%;
+  background: conic-gradient(rgba(255, 255, 255, 0.14) 0deg, rgba(255, 255, 255, 0.14) 0deg);
+}
+
+.pu-chip-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--c-panel-solid);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.pu-chip.deployable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.pu-chip.deployable.ready {
+  animation: pu-pulse 1.2s ease-in-out infinite;
+}
+
+.pu-chip.cooldown {
+  opacity: 0.55;
+}
+
+.pu-chip.expiring {
+  animation: pu-blink 0.4s steps(2, start) infinite;
+}
+
+@keyframes pu-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes pu-pulse {
+  50% {
+    transform: scale(1.08);
+  }
+}
+
 /* ---------- TEMP dev hint (removed when the real menu lands) ---------- */
 
 .temp-hint {
