@@ -46,18 +46,26 @@ Your first RUN walks you through everything at a gentle pace — steering, jumpi
 crate, sliding under the pipe, grabbing leaves — with no way to lose. Skippable, and
 replayable any time from **HOW TO PLAY** in the menu.
 
-## ✂ Customize your runner (claymation-style)
+## ✂ Customize your runner
 
-Hit **CUSTOMIZE ME** and drag the character to spin them around. Characters are
-built like stop-motion puppets — big close-set googly 3D eyes, thick clay brow slugs,
-a protruding muzzle with an enormous toothy grin, mitt hands, and a subtle
-fingerprint bump on every "plasticine" surface. Everything saves automatically:
+Hit **CUSTOMIZE ME** and drag the character to spin them around. Everything saves
+automatically. In **Body → Art Style**, pick the look — the whole customization
+catalog works in every style, so dispensaries can ship whichever fits their brand:
+
+- **Sticker Toon** (default) — Bitmoji-style: a flat painted face (almond eyes,
+  brows and mouth drawn right on the head, never protruding eyeballs), smooth matte
+  shading, clean outline-free silhouette
+- **Claymation** — the same flat face with bold ink outlines, a fingerprint clay
+  bump, and a rounder stop-motion head
+- **Chibi** — an oversized head with big glossy anime eyes and a thin outline
+
+Then style the rest:
 
 - **Body** — 12 skin tones, 3 builds, 3 heights
 - **Hair** — 12 styles (afro, locs, twin puffs, ponytail, mohawk, braids…) × 14 colors,
   with secondary physics — ponytails and locs actually swing while you run
-- **Face** — 5 eye styles (including *Half Baked* heavy lids), 6 eye colors, 4 clay brow
-  shapes, 5 molded mouths, facial hair, freckles, blush — with squash-blinking
+- **Face** — 5 eye styles (including *Half Baked* heavy lids), 6 eye colors, 4 brow
+  shapes, 5 mouths, facial hair, freckles, blush — all painted flat, with blinking
 - **Fits** — tees / hoodies / tanks / track jackets in 12 colors × 5 patterns
   (tie-dye! leaf print!), jeans / joggers / shorts / cargos, 10 sneaker colorways
 - **Extras** — beanies, dad caps (frontwards or backwards), bucket hats, headbands,

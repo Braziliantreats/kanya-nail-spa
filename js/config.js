@@ -42,6 +42,16 @@
     return { canvas, ctx: canvas.getContext('2d') };
   };
 
+  /* nudge a hex toward warm off-white — desaturates + lifts to a pastel */
+  GR.soften = function (hex, t) {
+    const c = parseInt(hex.slice(1), 16);
+    let r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+    r = Math.round(GR.lerp(r, 236, t));
+    g = Math.round(GR.lerp(g, 231, t));
+    b = Math.round(GR.lerp(b, 223, t));
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  };
+
   /* shared stepped-lighting ramp for the cel/toon look */
   let _toonRamp = null;
   GR.toonRamp = function () {
@@ -177,7 +187,7 @@
     skins: [
       '#f6d7bd', '#f2c49b', '#eab68a', '#dfa072', '#cd8b5f', '#b97a52',
       '#a4653f', '#8d5532', '#774526', '#5f371f', '#4a2a18', '#f8dfd0',
-    ],
+    ].map(function (h) { return GR.soften(h, 0.1); }),
     hairStyles: [
       { id: 'bald', label: 'Fresh Fade' },
       { id: 'buzz', label: 'Buzz Cut' },
@@ -240,7 +250,7 @@
     topColors: [
       '#f4f1ea', '#1f1f23', '#e63946', '#f4a261', '#e9c46a', '#2a9d8f',
       '#1b7a3d', '#457b9d', '#5e548e', '#e75480', '#7f5539', '#94d2bd',
-    ],
+    ].map(function (h) { return GR.soften(h, 0.16); }),
     bottoms: [
       { id: 'jeans', label: 'Jeans' },
       { id: 'joggers', label: 'Joggers' },
@@ -250,7 +260,7 @@
     bottomColors: [
       '#31435e', '#1f1f23', '#5b5f66', '#7f5539', '#3d5a3d', '#8d6b94',
       '#b8b2a7', '#803a3a', '#2a6f77', '#d9c58b',
-    ],
+    ].map(function (h) { return GR.soften(h, 0.16); }),
     shoeColors: [
       '#ffffff', '#1f1f23', '#e63946', '#f7b32b', '#2a9d8f', '#1b7a3d',
       '#5e60ce', '#ff7aa2', '#ff6b35', '#8d99ae',
@@ -279,8 +289,13 @@
       { id: 'chain', label: 'Gold Chain' },
     ],
     runners: [
-      { id: 'clay', label: 'Clay Custom' },
+      { id: 'clay', label: 'Custom Character' },
       { id: 'robot', label: 'R0-BUD the Farm-Bot' },
+    ],
+    styles: [
+      { id: 'sticker', label: 'Sticker Toon' },
+      { id: 'clay', label: 'Claymation' },
+      { id: 'chibi', label: 'Chibi' },
     ],
     robotColors: [
       '#e63946', '#1b7a3d', '#f7b32b', '#2a9d8f', '#457b9d', '#5e548e',
@@ -300,9 +315,10 @@
 
   GR.DEFAULT_AVATAR = {
     runner: 'clay',
+    artStyle: 'sticker',
     robotPrimary: '#e63946',
     robotAccent: '#8d99ae',
-    skin: '#cd8b5f',
+    skin: GR.soften('#cd8b5f', 0.1),
     build: 'medium',
     height: 'medium',
     hairStyle: 'short',
@@ -315,10 +331,10 @@
     freckles: false,
     blush: true,
     top: 'hoodie',
-    topColor: '#1b7a3d',
+    topColor: GR.soften('#1b7a3d', 0.16),
     pattern: 'solid',
     bottom: 'joggers',
-    bottomColor: '#1f1f23',
+    bottomColor: GR.soften('#1f1f23', 0.16),
     shoeColor: '#ffffff',
     hat: 'none',
     hatColor: '#c62828',
@@ -331,6 +347,7 @@
     const id = (list) => GR.pick(list).id;
     return {
       runner: 'clay',
+      artStyle: id(C.styles),
       robotPrimary: GR.pick(C.robotColors),
       robotAccent: GR.pick(C.robotColors),
       skin: GR.pick(C.skins),

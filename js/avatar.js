@@ -56,103 +56,206 @@
     return GR.toonMat(o);
   }
 
-  /* -------------------------------------------------- head painting
-     Claymation-style: eyes and brows are 3D geometry. The mouth is painted
-     flat on the face plane (no snout — a protruding muzzle reads as an
-     animal, not a person). Head sphere is rotated so canvas-center → -Z. */
+  /* -------------------------------------------------- flat face painting
+     Bitmoji/sticker-style: eyes, brows and mouth are all FLAT graphics on the
+     head texture (never protruding 3D eyeballs). variant ∈ normal|closed|dizzy
+     drives blink and the knocked-out face. cfg.artStyle picks almond vs anime
+     eyes. Head sphere is rotated so canvas-center faces -Z. */
   function paintHeadTex(cfg, variant) {
     const S = 512;
     const { canvas, ctx } = GR.makeCanvas(S, S);
     ctx.fillStyle = cfg.skin;
     ctx.fillRect(0, 0, S, S);
     const cx = 256;
+    const anime = cfg.artStyle === 'chibi';
+    const eyeY = 250, eyeDX = anime ? 66 : 62, browY = 205, mouthY = 300;
+    const ink = '#3a271c';
+
     if (cfg.blush) {
-      ctx.fillStyle = 'rgba(235,120,110,0.35)';
+      ctx.fillStyle = 'rgba(235,120,110,0.30)';
       for (const s of [-1, 1]) {
         ctx.beginPath();
-        ctx.ellipse(cx + s * 106, 296, 24, 15, 0, 0, GR.TAU);
+        ctx.ellipse(cx + s * 108, 288, 24, 15, 0, 0, GR.TAU);
         ctx.fill();
       }
     }
     if (cfg.freckles) {
       ctx.fillStyle = 'rgba(90,50,30,0.5)';
-      const spots = [[-86, 272], [-66, 282], [-100, 288], [86, 274], [68, 284], [102, 288], [-76, 264], [78, 262]];
-      for (const [dx, dy] of spots) {
+      for (const [dx, dy] of [[-96, 276], [-76, 286], [-108, 292], [96, 278], [76, 288], [108, 292]]) {
         ctx.beginPath();
         ctx.arc(cx + dx, dy, 4, 0, GR.TAU);
         ctx.fill();
       }
     }
 
-    /* the big molded mouth, flat on the face */
-    const cy = 318;
+    /* ---- eyes */
+    const P = anime ? { rx: 33, ry: 37, ir: 21, lash: 7 } : { rx: 33, ry: 26, ir: 15, lash: 5 };
+    const drawOpen = (x, lidT) => {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(x, eyeY, P.rx, P.ry, 0, 0, GR.TAU);
+      ctx.fill();
+      const iy = eyeY + (anime ? 4 : 3);
+      ctx.fillStyle = cfg.eyeColor;
+      ctx.beginPath();
+      ctx.arc(x, iy, P.ir, 0, GR.TAU);
+      ctx.fill();
+      if (anime) {
+        ctx.fillStyle = 'rgba(0,0,0,0.16)';
+        ctx.beginPath();
+        ctx.arc(x, iy, P.ir, Math.PI * 0.12, Math.PI * 0.88);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#141009';
+      ctx.beginPath();
+      ctx.arc(x, iy, P.ir * 0.5, 0, GR.TAU);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.beginPath();
+      ctx.arc(x - P.ir * 0.42, iy - P.ir * 0.42, P.ir * 0.28, 0, GR.TAU);
+      ctx.fill();
+      if (anime) {
+        ctx.beginPath();
+        ctx.arc(x + P.ir * 0.34, iy + P.ir * 0.36, P.ir * 0.16, 0, GR.TAU);
+        ctx.fill();
+      }
+      // upper lid (relaxed / sleepy): skin over the top, straight lash line
+      if (lidT > 0) {
+        ctx.fillStyle = cfg.skin;
+        ctx.fillRect(x - P.rx - 3, eyeY - P.ry - 3, (P.rx + 3) * 2, P.ry * 2 * lidT + 3);
+        const ly = eyeY - P.ry + P.ry * 2 * lidT;
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = P.lash;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - P.rx * 0.9, ly);
+        ctx.lineTo(x + P.rx * 0.9, ly);
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = P.lash;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - P.rx, eyeY - P.ry * 0.4);
+        ctx.quadraticCurveTo(x, eyeY - P.ry - 2, x + P.rx, eyeY - P.ry * 0.4);
+        ctx.stroke();
+      }
+    };
+    const drawHappy = (x) => {
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = P.lash + 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - 24, eyeY + 6);
+      ctx.quadraticCurveTo(x, eyeY - 18, x + 24, eyeY + 6);
+      ctx.stroke();
+    };
+    const drawBlink = (x) => {
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = P.lash + 1;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - 22, eyeY - 2);
+      ctx.quadraticCurveTo(x, eyeY + 11, x + 22, eyeY - 2);
+      ctx.stroke();
+    };
+    const drawX = (x) => {
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = P.lash + 1;
+      ctx.lineCap = 'round';
+      for (const d of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(x - 16 * d, eyeY - 16);
+        ctx.lineTo(x + 16 * d, eyeY + 16);
+        ctx.stroke();
+      }
+    };
+    const drawEye = (x, side) => {
+      if (variant === 'dizzy') return drawX(x);
+      if (variant === 'closed') return drawBlink(x);
+      const st = cfg.eyeStyle;
+      if (st === 'happy' || (st === 'wink' && side > 0)) return drawHappy(x);
+      const lidT = st === 'sleepy' ? 0.42 : st === 'chill' ? 0.2 : 0;
+      drawOpen(x, lidT);
+    };
+    drawEye(cx - eyeDX, -1);
+    drawEye(cx + eyeDX, 1);
+
+    /* ---- brows */
+    const browCol = shade(cfg.hairColor, -0.15);
+    ctx.strokeStyle = browCol;
+    ctx.lineCap = 'round';
+    for (const side of [-1, 1]) {
+      const x = cx + side * eyeDX;
+      const b = cfg.brow;
+      ctx.lineWidth = b === 'thick' ? 15 : 10;
+      ctx.beginPath();
+      if (b === 'flat') {
+        ctx.moveTo(x - 25, browY);
+        ctx.lineTo(x + 25, browY);
+      } else if (b === 'arch') {
+        ctx.moveTo(x - 25, browY + 7);
+        ctx.quadraticCurveTo(x, browY - 17, x + 25, browY + 5);
+      } else {
+        ctx.moveTo(x - 25, browY + 4);
+        ctx.quadraticCurveTo(x, browY - 9, x + 25, browY + 4);
+      }
+      ctx.stroke();
+    }
+
+    /* ---- mouth */
+    const cy = mouthY;
     const lineCol = '#5a2f24';
     ctx.strokeStyle = lineCol;
     ctx.lineCap = 'round';
     const mouth = variant === 'dizzy' ? 'dizzy' : cfg.mouth;
     if (mouth === 'grin') {
       ctx.beginPath();
-      ctx.moveTo(cx - 80, cy - 14);
-      ctx.quadraticCurveTo(cx, cy + 66, cx + 80, cy - 14);
-      ctx.quadraticCurveTo(cx, cy + 16, cx - 80, cy - 14);
+      ctx.moveTo(cx - 62, cy - 10);
+      ctx.quadraticCurveTo(cx, cy + 52, cx + 62, cy - 10);
+      ctx.quadraticCurveTo(cx, cy + 12, cx - 62, cy - 10);
       ctx.closePath();
       ctx.fillStyle = '#fdf8ee';
       ctx.fill();
-      ctx.lineWidth = 8;
+      ctx.lineWidth = 7;
       ctx.stroke();
-      ctx.lineWidth = 4;
-      for (const dx of [-40, 0, 40]) {
-        ctx.beginPath();
-        ctx.moveTo(cx + dx, cy + (dx === 0 ? 7 : -3));
-        ctx.lineTo(cx + dx, cy + (dx === 0 ? 40 : 22));
-        ctx.stroke();
-      }
     } else if (mouth === 'smile') {
-      ctx.lineWidth = 10;
+      ctx.lineWidth = 9;
       ctx.beginPath();
-      ctx.moveTo(cx - 66, cy - 8);
-      ctx.quadraticCurveTo(cx, cy + 44, cx + 66, cy - 8);
+      ctx.moveTo(cx - 52, cy - 6);
+      ctx.quadraticCurveTo(cx, cy + 36, cx + 52, cy - 6);
       ctx.stroke();
     } else if (mouth === 'smirk') {
-      ctx.lineWidth = 10;
+      ctx.lineWidth = 9;
       ctx.beginPath();
-      ctx.moveTo(cx - 36, cy + 10);
-      ctx.quadraticCurveTo(cx + 26, cy + 30, cx + 66, cy - 12);
+      ctx.moveTo(cx - 30, cy + 8);
+      ctx.quadraticCurveTo(cx + 22, cy + 24, cx + 54, cy - 10);
       ctx.stroke();
     } else if (mouth === 'open') {
       ctx.fillStyle = '#54231c';
       ctx.beginPath();
-      ctx.ellipse(cx, cy + 8, 46, 34, 0, 0, GR.TAU);
+      ctx.ellipse(cx, cy + 6, 38, 28, 0, 0, GR.TAU);
       ctx.fill();
-      ctx.lineWidth = 7;
+      ctx.lineWidth = 6;
       ctx.stroke();
       ctx.fillStyle = '#e0697a';
       ctx.beginPath();
-      ctx.ellipse(cx, cy + 26, 25, 13, 0, 0, GR.TAU);
+      ctx.ellipse(cx, cy + 20, 20, 11, 0, 0, GR.TAU);
       ctx.fill();
-      ctx.fillStyle = '#fdf8ee';
-      ctx.fillRect(cx - 30, cy - 22, 60, 12);
     } else if (mouth === 'tongue') {
-      ctx.lineWidth = 10;
+      ctx.lineWidth = 9;
       ctx.beginPath();
-      ctx.moveTo(cx - 60, cy - 6);
-      ctx.quadraticCurveTo(cx, cy + 40, cx + 60, cy - 6);
+      ctx.moveTo(cx - 48, cy - 4);
+      ctx.quadraticCurveTo(cx, cy + 32, cx + 48, cy - 4);
       ctx.stroke();
       ctx.fillStyle = '#e0697a';
       ctx.beginPath();
-      ctx.ellipse(cx + 24, cy + 28, 20, 24, 0.25, 0, GR.TAU);
+      ctx.ellipse(cx + 20, cy + 24, 17, 20, 0.25, 0, GR.TAU);
       ctx.fill();
-      ctx.strokeStyle = '#b04a5c';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(cx + 20, cy + 14);
-      ctx.lineTo(cx + 30, cy + 44);
-      ctx.stroke();
     } else {
-      // dizzy: wobbly little 'o'
       ctx.lineWidth = 8;
       ctx.beginPath();
-      ctx.ellipse(cx, cy + 8, 20, 25, 0.15, 0, GR.TAU);
+      ctx.ellipse(cx, cy + 6, 17, 21, 0.12, 0, GR.TAU);
       ctx.stroke();
     }
 
@@ -362,8 +465,8 @@
   function buildGlasses(cfg, R) {
     if (cfg.glassesStyle === 'none') return null;
     const g = new THREE.Group();
-    // sized and raised for the big googly clay eyes
-    const y = R * 0.3, z = -R * 1.12;
+    // aligned to the flat painted eyes (near the head's equator)
+    const y = R * 0.06, z = -R * 1.06;
     if (cfg.glassesStyle === 'sun') {
       const mat = stdMat('#15151a', { roughness: 0.35, metalness: 0.2 });
       for (const sx of [-1, 1]) {
@@ -557,73 +660,42 @@
     neck.add(neckMesh);
 
     const R = 0.28; // head radius
+    // art-style knobs: head oval, face bump, ink-outline thickness, nose size
+    const STYLE = {
+      sticker: { head: [0.99, 1.06, 0.99], faceBump: false, outline: 0, nose: 0.085 },
+      clay: { head: [0.96, 1.12, 0.97], faceBump: true, outline: 0.02, nose: 0.1 },
+      chibi: { head: [1.12, 1.2, 1.12], faceBump: false, outline: 0.014, nose: 0.075 },
+    };
+    const st = STYLE[cfg.artStyle] || STYLE.sticker;
+
     const headGrp = new THREE.Group();
     headGrp.position.set(0, 0.14 + R * 0.6, 0);
-    headGrp.scale.set(0.94, 1.16, 0.96); // tall clay oval
+    headGrp.scale.set(st.head[0], st.head[1], st.head[2]);
     neck.add(headGrp);
 
-    // no bump on the face — it fights the toon steps and looks patchy
     const headTex = {
       normal: track(paintHeadTex(cfg, 'normal')),
+      closed: track(paintHeadTex(cfg, 'closed')),
       dizzy: track(paintHeadTex(cfg, 'dizzy')),
     };
-    const headMat = track(GR.toonMat({ map: headTex.normal }));
+    const headMat = track(st.faceBump
+      ? GR.toonMat({ map: headTex.normal, bumpMap: getClayBump(), bumpScale: 0.02 })
+      : GR.toonMat({ map: headTex.normal }));
     const head = mesh(track(new THREE.SphereGeometry(R, 32, 24)), headMat, 0, 0, 0);
     head.rotation.y = Math.PI / 2; // texture center → -Z
     headGrp.add(head);
 
-    /* googly clay eyes: big close-set white balls, proud of the face */
-    const eyeWhiteMat = track(new THREE.MeshStandardMaterial({ color: 0xfdfaf2, roughness: 0.55 }));
-    const irisMat = track(stdMat(cfg.eyeColor, { roughness: 0.45 }));
-    const pupilMat = track(new THREE.MeshStandardMaterial({ color: 0x17120e, roughness: 0.35 }));
-    const eyeR = R * 0.26;
-    const lidAmount = { chill: 0.5, sleepy: 0.32, round: 10, happy: 10, wink: 0.5 }[cfg.eyeStyle];
-    const face = { eyes: [], pupils: [] };
+    // small flattened ears, low on the head
     for (const sx of [-1, 1]) {
-      const eg = new THREE.Group();
-      eg.position.set(sx * R * 0.28, R * 0.3, -R * 0.8);
-      const white = mesh(track(new THREE.SphereGeometry(eyeR, 18, 14)), eyeWhiteMat, 0, 0, 0);
-      eg.add(white);
-      const iris = mesh(track(new THREE.SphereGeometry(eyeR * 0.44, 12, 10)), irisMat, 0, -eyeR * 0.05, -eyeR * 0.72);
-      const pupil = mesh(track(new THREE.SphereGeometry(eyeR * 0.26, 10, 8)), pupilMat, 0, -eyeR * 0.05, -eyeR * 0.92);
-      iris.userData.noOutline = true;
-      pupil.userData.noOutline = true;
-      eg.add(iris, pupil);
-      // heavy clay lid (skin ball shifted up to hood the eye)
-      if (lidAmount < 2) {
-        const lid = mesh(track(new THREE.SphereGeometry(eyeR * 1.06, 16, 12)), skinMat, 0, eyeR * (0.35 + lidAmount * 0.5), eyeR * 0.06);
-        eg.add(lid);
-      }
-      // happy / wink: molded-shut squint
-      const shut = cfg.eyeStyle === 'happy' || (cfg.eyeStyle === 'wink' && sx === 1);
-      if (shut) eg.scale.y = 0.22;
-      face.eyes.push({ group: eg, shut });
-      face.pupils.push(pupil);
-      headGrp.add(eg);
-    }
-
-    /* thick clay brow slugs */
-    const browMat = track(clayMat(shade(cfg.hairColor, -0.15)));
-    const browDef = {
-      soft: { r: 0.055, len: 0.3, rot: 0.18, y: 0.68 },
-      flat: { r: 0.055, len: 0.34, rot: 0, y: 0.66 },
-      arch: { r: 0.055, len: 0.3, rot: 0.42, y: 0.72 },
-      thick: { r: 0.085, len: 0.34, rot: 0.12, y: 0.7 },
-    }[cfg.brow] || { r: 0.055, len: 0.3, rot: 0.18, y: 0.68 };
-    for (const sx of [-1, 1]) {
-      const brow = mesh(track(new THREE.CapsuleGeometry(R * browDef.r, R * browDef.len, 4, 8)), browMat, sx * R * 0.3, R * browDef.y, -R * 0.84);
-      brow.rotation.z = Math.PI / 2 - sx * browDef.rot;
-      headGrp.add(brow);
-    }
-
-    // big soft ears + round clay nose perched between the eyes
-    for (const sx of [-1, 1]) {
-      const ear = mesh(track(new THREE.SphereGeometry(R * 0.26, 12, 10)), skinMat, sx * R * 0.96, -R * 0.08, 0.01);
-      ear.scale.set(0.5, 1.05, 0.85);
+      const ear = mesh(track(new THREE.SphereGeometry(R * 0.2, 12, 10)), skinMat, sx * R * 0.95, -R * 0.06, 0.02);
+      ear.scale.set(0.45, 0.95, 0.8);
       headGrp.add(ear);
     }
-    const nose = mesh(track(new THREE.SphereGeometry(R * 0.16, 14, 12)), skinMat, 0, -R * 0.05, -R * 1.0);
-    nose.scale.set(1, 0.9, 0.95);
+    // small flat nose bump between the painted eyes and mouth
+    const nose = mesh(track(new THREE.SphereGeometry(R * st.nose, 14, 12)), skinMat, 0, -R * 0.06, -R * 1.0);
+    nose.scale.set(1, 0.8, 0.42);
+    nose.userData.noOutline = true;
+    nose.castShadow = false; // avoid a smudgy self-shadow on the cheek
     headGrp.add(nose);
 
     // facial hair (molded around the muzzle)
@@ -665,21 +737,35 @@
     const phones = buildHeadExtra(cfg, R);
     if (phones) headGrp.add(phones);
 
-    /* ------ ink outlines: inverted-hull pass over every clay piece */
-    const outlineMat = track(new THREE.MeshBasicMaterial({ color: 0x2a1c12, side: THREE.BackSide }));
-    const outlineTargets = [];
-    group.traverse((o) => {
-      if (!o.isMesh || o.userData.noOutline) return;
-      if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
-      if (o.geometry.boundingSphere.radius < 0.05) return; // skip tiny trim pieces
-      outlineTargets.push(o);
-    });
-    for (const o of outlineTargets) {
-      const hull = new THREE.Mesh(o.geometry, outlineMat);
-      hull.scale.setScalar(1.05);
-      hull.castShadow = false;
-      hull.userData.noOutline = true;
-      o.add(hull);
+    /* ------ ink outlines (clay/chibi only): back-side hull expanded along
+       vertex normals, so the non-uniformly-scaled head outlines evenly */
+    if (st.outline > 0) {
+      const outlineMat = track(new THREE.MeshBasicMaterial({ color: 0x2a1c12, side: THREE.BackSide }));
+      const outlineTargets = [];
+      group.traverse((o) => {
+        if (!o.isMesh || o.userData.noOutline) return;
+        if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+        if (o.geometry.boundingSphere.radius < 0.05) return; // skip tiny trim pieces
+        outlineTargets.push(o);
+      });
+      for (const o of outlineTargets) {
+        const g = o.geometry.clone();
+        const pos = g.getAttribute('position');
+        const nor = g.getAttribute('normal');
+        if (nor) {
+          for (let i = 0; i < pos.count; i++) {
+            pos.setXYZ(i,
+              pos.getX(i) + nor.getX(i) * st.outline,
+              pos.getY(i) + nor.getY(i) * st.outline,
+              pos.getZ(i) + nor.getZ(i) * st.outline);
+          }
+          pos.needsUpdate = true;
+        }
+        const hull = new THREE.Mesh(g, outlineMat);
+        hull.castShadow = false;
+        hull.userData.noOutline = true;
+        o.add(hull);
+      }
     }
 
     /* ------ public interface */
@@ -701,20 +787,9 @@
       setFace(name) {
         if (this._face === name) return;
         this._face = name;
-        headMat.map = name === 'dizzy' ? headTex.dizzy : headTex.normal;
-        for (let i = 0; i < face.eyes.length; i++) {
-          const e = face.eyes[i];
-          const p = face.pupils[i];
-          if (name === 'closed') {
-            e.group.scale.y = 0.18; // clay-squint blink
-          } else {
-            e.group.scale.y = e.shut ? 0.22 : 1;
-          }
-          // dizzy: cross-eyed pupils
-          const sx = i === 0 ? -1 : 1;
-          p.position.x = name === 'dizzy' ? sx * -0.045 : 0;
-          p.position.y = name === 'dizzy' ? 0.02 : -0.0036;
-        }
+        headMat.map = name === 'closed' ? headTex.closed
+          : name === 'dizzy' ? headTex.dizzy
+          : headTex.normal;
       },
       dispose() {
         // all geometries/materials/textures are created per-avatar, so a full

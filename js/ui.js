@@ -279,7 +279,7 @@
       });
       this.$('btn-random').addEventListener('click', () => {
         GR.Audio.sfx('power');
-        this.cfg = Object.assign(GR.randomAvatar(), { runner: this.cfg.runner });
+        this.cfg = Object.assign(GR.randomAvatar(), { runner: this.cfg.runner, artStyle: this.cfg.artStyle });
         this._applyCfg();
       });
       this.$('btn-reset').addEventListener('click', () => {
@@ -312,6 +312,7 @@
             { type: 'swatch', label: 'Bot Trim', key: 'robotAccent', values: C.robotColors }
           );
         } else {
+          sections.push({ type: 'chips', label: 'Art Style', key: 'artStyle', values: C.styles });
           sections = sections.concat(tab.sections);
         }
       } else if (this.cfg.runner === 'robot') {
