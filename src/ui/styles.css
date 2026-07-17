@@ -1,0 +1,222 @@
+/* Crystal Rush — UI overlay styles (spec §14).
+   DOM/CSS overlay above the WebGL canvas: crisper text, easy responsive layout.
+   Portrait-first, safe-area aware, ≥44px tap targets. */
+
+:root {
+  --c-bg: #140d2e;
+  --c-panel: rgba(30, 22, 66, 0.92);
+  --c-panel-solid: #221a4a;
+  --c-text: #f2ecff;
+  --c-text-dim: #b9aee0;
+  --c-accent: #29e6ff;
+  --c-accent-2: #ff3fa4;
+  --c-warn: #ffd166;
+  --radius: 14px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    Roboto,
+    'Helvetica Neue',
+    sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none; /* swipes belong to the game, not the browser */
+}
+
+#game-container {
+  position: fixed;
+  inset: 0;
+}
+
+#game-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The UI root ignores pointer events; interactive children opt back in. */
+#ui-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* spec §16: tap targets ≥ 44px */
+  min-width: 44px;
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--c-bg);
+  background: linear-gradient(135deg, var(--c-accent), #7d5cff);
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.btn:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 4px 18px rgba(41, 230, 255, 0.35);
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--c-warn);
+  outline-offset: 2px;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--c-text-dim);
+  border: 2px solid rgba(185, 174, 224, 0.4);
+}
+
+.btn-ghost:hover {
+  box-shadow: none;
+  color: var(--c-text);
+}
+
+/* ---------- Age gate (spec §2) ---------- */
+
+.age-gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(10, 6, 26, 0.9);
+  backdrop-filter: blur(6px);
+}
+
+.age-gate-panel {
+  max-width: 420px;
+  width: 100%;
+  padding: 32px 28px;
+  background: var(--c-panel);
+  border: 1px solid rgba(41, 230, 255, 0.25);
+  border-radius: var(--radius);
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.age-gate-panel h1 {
+  margin: 0 0 10px;
+  font-size: 26px;
+}
+
+.age-gate-panel p {
+  margin: 0 0 24px;
+  color: var(--c-text-dim);
+}
+
+.age-gate-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ---------- Legal footer (spec §2: persistent, config-driven) ---------- */
+
+.legal-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px calc(12px + var(--safe-right)) calc(6px + var(--safe-bottom))
+    calc(12px + var(--safe-left));
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--c-text-dim);
+  background: linear-gradient(transparent, rgba(10, 6, 26, 0.85) 40%);
+  text-align: center;
+}
+
+.legal-footer .age-label {
+  font-weight: 800;
+  color: var(--c-warn);
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* ---------- Debug overlay (?debug=1, spec §18) ---------- */
+
+.debug-overlay {
+  position: fixed;
+  top: calc(8px + var(--safe-top));
+  left: calc(8px + var(--safe-left));
+  z-index: 200;
+  pointer-events: none;
+  padding: 8px 10px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre;
+  color: #aef7ff;
+  background: rgba(5, 3, 16, 0.62);
+  border-radius: 8px;
+}
+
+/* ---------- Boot error ---------- */
+
+.fatal-error {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--c-bg);
+  color: var(--c-text);
+  text-align: center;
+  pointer-events: auto;
+}
