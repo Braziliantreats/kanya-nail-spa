@@ -34,7 +34,11 @@ import { LegalFooter } from './ui/LegalFooter';
 import { InputSystem } from './systems/InputSystem';
 import { MovementSystem } from './systems/MovementSystem';
 import { CameraSystem } from './systems/CameraSystem';
+import { SpawnSystem } from './systems/SpawnSystem';
+import { CollisionSystem } from './systems/CollisionSystem';
+import { ScoreSystem } from './systems/ScoreSystem';
 import { PlayerRig } from './render/PlayerRig';
+import type { RunSummary } from './integrations/RewardsBridge';
 
 export interface GameInitOptions {
   /** Element the WebGL canvas mounts into (default #game-container). */
@@ -99,7 +103,12 @@ export class Game {
   movement!: MovementSystem;
   cameraSystem!: CameraSystem;
   playerRig!: PlayerRig;
+  spawn!: SpawnSystem;
+  collision!: CollisionSystem;
+  score!: ScoreSystem;
   private tempStartHint: HTMLElement | null = null;
+  private sessionTimeS = 0;
+  private crashAtS = -99;
 
   readonly run: RunState = {
     runId: '',
@@ -170,12 +179,23 @@ export class Game {
     this.movement = new MovementSystem(this.bus);
     this.playerRig = new PlayerRig(this.scene, this.materials, this.bus, 'sprocket');
     this.cameraSystem = new CameraSystem(cam);
+    this.spawn = new SpawnSystem(this.scene, this.materials);
+    this.collision = new CollisionSystem(this.bus);
+    this.score = new ScoreSystem(this.bus, this.pointsEmitter);
+    this.bus.on('player.crashed', ({ cause, distance }) => this.onCrash(cause, distance));
 
     this.input = new InputSystem(this.container);
     this.input.onAnyInput = () => {
-      // TEMP(phase 5): any input on the menu starts a run until the real
-      // main-menu screen lands.
-      if (this.fsm.current === GameState.Menu) this.startRun(false);
+      // TEMP(phase 5): any input on the menu (or after a crash cooldown)
+      // starts a run until the real menu/game-over screens land.
+      if (this.fsm.current === GameState.Menu) {
+        this.startRun(false);
+      } else if (
+        this.fsm.current === GameState.GameOver &&
+        this.sessionTimeS - this.crashAtS > 0.7
+      ) {
+        this.startRun(false);
+      }
     };
     this.input.onPauseKey = () => {
       if (this.fsm.isRunning) {
@@ -187,6 +207,7 @@ export class Game {
 
     this.legalFooter = new LegalFooter(this.uiRoot);
     this.debugOverlay = new DebugOverlay(this.uiRoot);
+    this.debugOverlay.setPoolStatsProvider(() => this.spawn.statsLine());
 
     // TEMP(phase 5): minimal start hint until the real menu exists.
     this.tempStartHint = document.createElement('div');
@@ -218,6 +239,7 @@ export class Game {
 
   private tick = (dt: number): void => {
     const state = this.fsm.current;
+    this.sessionTimeS += dt;
 
     if (this.fsm.isRunning) {
       this.updateRun(dt);
@@ -251,10 +273,14 @@ export class Game {
 
     this.input.update(dt);
     this.movement.update(dt, this.input);
+    this.spawn.update(dt, run.speed, run.tier);
+    this.score.update(dt, run, this.movement, this.spawn);
     this.environment.update(dt, run.speed);
     this.playerRig.update(dt, this.movement, run.speed / Config.run.maxSpeed);
     this.cameraSystem.update(dt, this.movement, run.speed);
     this.pointsEmitter.update(dt);
+    // Collision last: verdicts use this frame's final positions.
+    this.collision.update(this.movement, this.spawn, run.distance);
   }
 
   private currentTier(): number {
@@ -283,11 +309,55 @@ export class Game {
     this.pointsEmitter.setRun(run.runId);
     if (this.fsm.transition(tutorial ? GameState.Tutorial : GameState.Playing)) {
       this.movement.reset();
+      this.score.reset();
+      // Tutorial runs get extra obstacle-free runway (tier-0 first ~10s, §5).
+      this.spawn.reset(tutorial ? 25 : 0);
       this.input.clear();
       this.input.enabled = true;
       this.tempStartHint?.classList.add('hidden');
       this.bus.emit('run.started', { runId: run.runId, tutorial });
       this.telemetry.track('run_start', { runId: run.runId, tutorial });
+    }
+  }
+
+  private onCrash(cause: string, distance: number): void {
+    this.crashAtS = this.sessionTimeS;
+    this.input.enabled = false;
+    this.input.clear();
+    this.cameraSystem.shake(Config.camera.shake.crashMagnitude);
+    this.telemetry.track('crash', { cause, distance: Math.round(distance) });
+
+    // Revive flow arrives with the UI phase; for now every crash ends the run.
+    this.endRun(cause);
+  }
+
+  private endRun(crashCause: string): void {
+    const run = this.run;
+    const summary: RunSummary = {
+      runId: run.runId,
+      distance: Math.floor(run.distance),
+      coins: run.coins,
+      score: Math.round(run.score),
+      powerupsUsed: { ...run.powerupsUsed },
+      nearMisses: run.nearMisses,
+      durationMs: Math.round(run.elapsedS * 1000),
+      crashCause,
+    };
+
+    // Baseline persistence (the progression phase formalizes totals/streaks).
+    const keys = Config.storage.keys;
+    const prevBest = this.storage.getJSON<number>(keys.highScore, 0);
+    if (summary.score > prevBest) this.storage.setJSON(keys.highScore, summary.score);
+    this.storage.setJSON(
+      keys.crystalsTotal,
+      this.storage.getJSON<number>(keys.crystalsTotal, 0) + run.coins,
+    );
+
+    this.pointsEmitter.flush();
+    if (this.fsm.transition(GameState.GameOver)) {
+      this.bus.emit('run.ended', { summary });
+      this.rewardsBridge.onRunComplete(summary);
+      this.telemetry.track('run_end', { ...summary });
     }
   }
 
@@ -310,6 +380,7 @@ export class Game {
     this.loop.dispose();
     this.input.dispose();
     this.playerRig.dispose();
+    this.spawn.dispose();
     this.environment.dispose();
     this.materials.disposeAll();
     this.renderer.dispose();
